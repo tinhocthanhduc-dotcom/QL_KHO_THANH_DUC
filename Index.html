@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.10.5.1</title>
+<title>QL KHO THÀNH ĐỨC · V10.10.6</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -281,7 +281,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 
 
 
-/* ===== V10.10.5.1 · UX/UI OPTIMIZATION ===== */
+/* ===== V10.10.6 · UX/UI OPTIMIZATION ===== */
 .top{padding:9px 18px 10px!important}.top-row{min-height:48px}.title h1{font-size:25px!important;margin-bottom:2px!important}.title p{font-size:11.5px!important}.top-actions{align-items:center;flex-wrap:nowrap!important}.btn{height:38px!important;border-radius:10px!important;padding:0 13px!important}.refresh-main{font-weight:900!important}.tools-wrap{position:relative}.tools-menu{display:none;position:absolute;right:0;top:44px;width:220px;padding:7px;background:#fff;border:1px solid #e4e7ec;border-radius:13px;box-shadow:0 18px 45px rgba(15,23,42,.20);z-index:80}.tools-menu.open{display:grid}.tools-menu button{border:0;background:#fff;color:#344054;text-align:left;padding:10px 11px;border-radius:9px;font-weight:750;cursor:pointer}.tools-menu button:hover{background:#f2f4f7;color:#1d4ed8}
 .container{padding-top:12px!important}.statusbar{padding:8px 11px!important;border-radius:12px!important;margin-bottom:12px!important;gap:8px!important}.statusbar #statusDetail{color:#5d6b82}.health-toggle{border:1px solid #d0d5dd;border-radius:999px;background:#fff;padding:5px 9px;font-size:11px;font-weight:850;cursor:pointer;color:#344054;display:inline-flex;gap:6px;align-items:center}.health-toggle.ok{background:#ecfdf3;border-color:#abefc6;color:#067647}.health-toggle.loading,.health-toggle.warn{background:#fffaeb;border-color:#fedf89;color:#b54708}.health-toggle.error{background:#fef3f2;border-color:#fecdca;color:#b42318}.status-diagnostics{display:none;flex:1 0 100%;gap:7px;align-items:center;padding-top:7px;border-top:1px solid rgba(29,78,216,.10)}.status-diagnostics.open{display:flex;flex-wrap:wrap}.module-chip{padding:5px 8px!important;font-size:10.5px!important}
 .section-title{margin-bottom:9px!important}.section-title h2{font-size:17px!important}.inventory-meta{background:#f8fafc!important}.kpis{gap:10px!important}.kpi{min-height:96px!important;padding:13px 14px!important;border-radius:15px!important;box-shadow:0 4px 16px rgba(15,23,42,.045)!important}.kpi .label{margin-bottom:5px!important;font-size:11px!important}.kpi .value{font-size:27px!important}.kpi small{margin-top:4px!important;font-size:10.5px!important}.kpi-alert{border-color:#fecaca!important;background:linear-gradient(180deg,#fff,#fffafa)!important}.value-money{font-size:23px!important;white-space:nowrap}
@@ -297,9 +297,9 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 </style>
 </head>
 <body>
-<!-- V10.10.5.1 UX/UI Optimization: compact header/status, priority KPIs, filters, row actions, collapsible side panels, AI empty state. -->
+<!-- V10.10.6 UX/UI Optimization: compact header/status, priority KPIs, filters, row actions, collapsible side panels, AI empty state. -->
 <header class="top"><div class="top-row">
-  <div class="title"><h1>📦 QL KHO THÀNH ĐỨC</h1><p><span id="headerVersion">V10.10.5.1</span> · Kho 58 + Kho 145 · Phân quyền + Audit + AI</p></div>
+  <div class="title"><h1>📦 QL KHO THÀNH ĐỨC</h1><p><span id="headerVersion">V10.10.6</span> · Kho 58 + Kho 145 · Phân quyền + Audit + AI</p></div>
   <div class="top-actions">
     <button class="btn light refresh-main" id="refreshNow">↻ Cập nhật</button>
     <div class="tools-wrap">
@@ -314,7 +314,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 </div></header>
 <main class="container">
   <div class="statusbar" id="statusbar">
-    <span class="dot" id="statusDot"></span><strong id="statusText">V10.10.5.1 · Đang khởi động Kho 58...</strong><span id="statusDetail"></span><span class="spacer"></span>
+    <span class="dot" id="statusDot"></span><strong id="statusText">V10.10.6 · Đang khởi động Kho 58...</strong><span id="statusDetail"></span><span class="spacer"></span>
     <button class="health-toggle loading" id="healthToggle" type="button"><span id="healthSummary">Hệ thống đang tải</span><span id="healthChevron">⌄</span></button>
     <span class="module-chip" id="modAuth">Quyền: tải...</span><span class="pill" id="countdown">Cập nhật thủ công</span>
     <div class="status-diagnostics" id="statusDiagnostics">
@@ -464,7 +464,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.10.5.1";
+let APP_VERSION="V10.10.6";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}

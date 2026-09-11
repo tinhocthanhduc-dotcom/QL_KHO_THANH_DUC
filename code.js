@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.10.5.1';
+const APP_VERSION = 'V10.10.6';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -174,7 +174,7 @@ const AI_CHAT_CONFIG = Object.freeze({
 });
 
 const AI_AGENT_CONFIG = Object.freeze({
-  VERSION: 'AGENT_V3_PROACTIVE_2026-09-10',
+  VERSION: 'AGENT_V3.1_RESOLVER_V2_2026-09-11',
   STATE_VERSION: 'CTX_V1',
   MAX_TOOL_ROUNDS: 3,
   MAX_TOOL_RESULTS: 24,
@@ -183,6 +183,16 @@ const AI_AGENT_CONFIG = Object.freeze({
   MAX_HISTORY_ROWS: 40,
   MAX_RECENT_VOUCHERS: 20,
   MAX_ALIAS_LENGTH: 120
+});
+
+
+// V10.10.6 · Resolver V2: confidence chuẩn hóa + chặn đoán variant/tình trạng.
+const AI_RESOLVER_CONFIG = Object.freeze({
+  VERSION: 'RESOLVER_V2_2026-09-11',
+  AUTO_RESOLVE_MIN_CONFIDENCE: 88,
+  EXACT_MODEL_CONFIDENCE: 96,
+  HIGH_CONFIDENCE_FLOOR: 88,
+  MAX_CANDIDATES: 8
 });
 
 const PROACTIVE_V108_CONFIG = Object.freeze({
@@ -2459,67 +2469,152 @@ function coreValidateActionPlanV105_(plan, context) {
   return {ok:failures.length===0, failures:failures, results:results, ruleset:CORE_V105_CONFIG.RULESET_VERSION};
 }
 
+function aiResolverItemTextV2_(item) {
+  return [item && item.name || '', item && item.aliases || ''].concat(item && item.legacyNames || []).join(' | ');
+}
+
+function aiResolverScoreConfidenceV2_(score) {
+  score = Number(score || 0);
+  if (score >= 900) return 99;
+  if (score >= 650) return 97;
+  if (score >= 500) return 95;
+  if (score >= 400) return 93;
+  if (score >= 340) return 91;
+  if (score >= 300) return 89;
+  if (score >= 260) return 86;
+  if (score >= 220) return 80;
+  if (score >= 170) return 72;
+  if (score > 0) return Math.max(35, Math.min(70, Math.round(score / 3)));
+  return 0;
+}
+
+function aiResolverCandidateRowsV2_(scored) {
+  const rows = Array.isArray(scored) ? scored : [];
+  return rows.slice(0, AI_RESOLVER_CONFIG.MAX_CANDIDATES).map(function(x){
+    return {
+      code:x.item.code,
+      name:x.item.name,
+      score:Number(x.score || 0),
+      confidence:aiResolverScoreConfidenceV2_(x.score)
+    };
+  });
+}
+
+function aiResolverMachinePoolV2_(pool) {
+  return Array.isArray(pool) && pool.length > 0 && pool.every(function(item){
+    const text = aiResolverItemTextV2_(item);
+    return aiProductKind_(text) === 'MACHINE';
+  });
+}
+
+function aiResolverMachineConditionV2_(text) {
+  const n = normalize_(text);
+  if (/da qua su dung|may cu|\bcu\b|thao may/.test(n)) return 'USED';
+  if (/may moi|\bmoi\b/.test(n)) return 'NEW';
+  // CH chỉ mang nghĩa NEW khi candidate pool đã xác định là máy in.
+  if (/chinh hang|\bch\b/.test(n)) return 'NEW';
+  return '';
+}
+
+function aiResolverVariantAmbiguityV2_(raw, pool) {
+  if (!Array.isArray(pool) || pool.length < 2) return false;
+  const machinePool = aiResolverMachinePoolV2_(pool);
+  const queryVariants = aiVariantTokens_(raw).filter(function(v){return !(machinePool && v==='CH');});
+  if (queryVariants.length) return false;
+  const signatures = {};
+  let explicitCount = 0;
+  pool.forEach(function(item){
+    const vars = aiVariantTokens_(aiResolverItemTextV2_(item)).filter(function(v){return !(machinePool && v==='CH');});
+    if (vars.length) explicitCount++;
+    signatures[vars.length ? vars.slice().sort().join('+') : '(NONE)'] = true;
+  });
+  return explicitCount > 0 && Object.keys(signatures).length > 1;
+}
+
+function aiResolverConditionAmbiguityV2_(raw, pool) {
+  if (!aiResolverMachinePoolV2_(pool) || aiResolverMachineConditionV2_(raw) || pool.length < 2) return false;
+  const conditions = {};
+  pool.forEach(function(item){
+    const condition = aiResolverMachineConditionV2_(aiResolverItemTextV2_(item));
+    if (condition) conditions[condition] = true;
+  });
+  return Object.keys(conditions).length > 1;
+}
+
+function aiResolverEnrichResultV2_(result, confidence, margin) {
+  result = result || {};
+  result.confidence = Math.max(0, Math.min(100, Math.round(Number(confidence || 0))));
+  result.margin = Math.max(0, Number(margin || 0));
+  result.resolverVersion = AI_RESOLVER_CONFIG.VERSION;
+  return result;
+}
+
 function coreResolveSkuIdentityV105_(itemText, catalog) {
   const raw = String(itemText || '').trim();
   const q = normalize_(raw);
   const list = Array.isArray(catalog) ? catalog : [];
-  if (!q) return {resolved:false,candidates:[],reason:'EMPTY',ruleId:'R46'};
+  if (!q) return aiResolverEnrichResultV2_({resolved:false,candidates:[],reason:'EMPTY',ruleId:'R46'},0,0);
 
   const tdMatch = raw.toUpperCase().match(/TD-\d{4}/);
   if (tdMatch) {
     const exactCode = list.find(function(x){return String(x.code||'').toUpperCase()===tdMatch[0];});
-    if (!exactCode) return {resolved:false,candidates:[],reason:'CODE_NOT_FOUND',ruleId:'R11'};
+    if (!exactCode) return aiResolverEnrichResultV2_({resolved:false,candidates:[],reason:'CODE_NOT_FOUND',ruleId:'R11'},0,0);
     const descriptive = raw.replace(tdMatch[0],' ').trim();
+    const exactCandidate = [{code:exactCode.code,name:exactCode.name,score:10000,confidence:100}];
     if (descriptive && !aiCandidateIdentityCompatible_(descriptive, exactCode)) {
-      return {resolved:false,candidates:[{code:exactCode.code,name:exactCode.name,score:10000}],reason:'CODE_IDENTITY_MISMATCH',ruleId:'R11'};
+      return aiResolverEnrichResultV2_({resolved:false,candidates:exactCandidate,reason:'CODE_IDENTITY_MISMATCH',ruleId:'R11'},0,10000);
     }
-    return {resolved:true,item:exactCode,score:10000,candidates:[{code:exactCode.code,name:exactCode.name,score:10000}],reason:'EXACT_CODE',ruleId:'R11'};
+    return aiResolverEnrichResultV2_({resolved:true,item:exactCode,score:10000,candidates:exactCandidate,reason:'EXACT_CODE',ruleId:'R11'},100,10000);
   }
 
   const qModels = aiStrongModelTokens_(raw);
   const qBrands = aiBrandTokens_(raw);
   const qVariants = aiVariantTokens_(raw);
   const qKind = aiProductKind_(raw);
-  const qCondition = aiProductCondition_(raw,qKind);
+  let qCondition = aiProductCondition_(raw,qKind);
 
   // Exact normalized name/alias vẫn phải qua identity guard.
   const exacts = list.filter(function(item){
     const names=[item.name].concat(String(item.aliases||'').split(/[,;|\n]+/)).concat(item.legacyNames||[]).map(normalize_).filter(Boolean);
     return names.indexOf(q)>=0 && aiCandidateIdentityCompatible_(raw,item);
   });
-  if (exacts.length===1) return {resolved:true,item:exacts[0],score:5000,candidates:[{code:exacts[0].code,name:exacts[0].name,score:5000}],reason:'EXACT_NAME_OR_ALIAS',ruleId:'R11'};
-  if (exacts.length>1) return {resolved:false,candidates:exacts.slice(0,8).map(function(x){return {code:x.code,name:x.name,score:5000};}),reason:'DUPLICATE_EXACT_ALIAS',ruleId:'R46'};
+  if (exacts.length===1) {
+    return aiResolverEnrichResultV2_({resolved:true,item:exacts[0],score:5000,candidates:[{code:exacts[0].code,name:exacts[0].name,score:5000,confidence:99}],reason:'EXACT_NAME_OR_ALIAS',ruleId:'R11'},99,5000);
+  }
+  if (exacts.length>1) {
+    return aiResolverEnrichResultV2_({resolved:false,candidates:exacts.slice(0,8).map(function(x){return {code:x.code,name:x.name,score:5000,confidence:99};}),reason:'DUPLICATE_EXACT_ALIAS',ruleId:'R46'},0,0);
+  }
 
   let pool = list.slice();
   if (qModels.length) {
     pool = pool.filter(function(item){
-      const text=[item.name,item.aliases].concat(item.legacyNames||[]).join(' | ');
-      const models=aiStrongModelTokens_(text);
+      const models=aiStrongModelTokens_(aiResolverItemTextV2_(item));
       return qModels.some(function(m){return models.indexOf(m)>=0;});
     });
-    if (!pool.length) return {resolved:false,candidates:[],reason:'MODEL_NOT_FOUND',ruleId:'R11'};
+    if (!pool.length) return aiResolverEnrichResultV2_({resolved:false,candidates:[],reason:'MODEL_NOT_FOUND',ruleId:'R11'},0,0);
   }
   if (qBrands.length) {
     const branded = pool.filter(function(item){
-      const brands=aiBrandTokens_([item.name,item.aliases].concat(item.legacyNames||[]).join(' | '));
-      return !brands.length || qBrands.some(function(b){return brands.indexOf(b)>=0;});
+      const brands=aiBrandTokens_(aiResolverItemTextV2_(item));
+      return qBrands.some(function(b){return brands.indexOf(b)>=0;});
     });
     if (branded.length) pool=branded;
   }
   if (qKind) {
-    const kinded=pool.filter(function(item){return aiProductKind_([item.name,item.aliases].concat(item.legacyNames||[]).join(' | '))===qKind;});
+    const kinded=pool.filter(function(item){return aiProductKind_(aiResolverItemTextV2_(item))===qKind;});
     if (kinded.length) pool=kinded;
   }
+  if (!qCondition && aiResolverMachinePoolV2_(pool)) qCondition = aiResolverMachineConditionV2_(raw);
   if (qVariants.length) {
     pool=pool.filter(function(item){
-      const vars=aiVariantTokens_([item.name,item.aliases].concat(item.legacyNames||[]).join(' | '));
+      const vars=aiVariantTokens_(aiResolverItemTextV2_(item));
       return qVariants.every(function(v){return vars.indexOf(v)>=0;});
     });
-    if (!pool.length) return {resolved:false,candidates:[],reason:'VARIANT_NOT_FOUND',ruleId:'R12'};
+    if (!pool.length) return aiResolverEnrichResultV2_({resolved:false,candidates:[],reason:'VARIANT_NOT_FOUND',ruleId:'R12'},0,0);
   }
   if (qCondition) {
     const conditioned=pool.filter(function(item){
-      const t=[item.name,item.aliases].concat(item.legacyNames||[]).join(' | ');
+      const t=aiResolverItemTextV2_(item);
       return aiProductCondition_(t,aiProductKind_(t))===qCondition;
     });
     if (conditioned.length) pool=conditioned;
@@ -2528,18 +2623,33 @@ function coreResolveSkuIdentityV105_(itemText, catalog) {
   const scored=pool.map(function(item){return {item:item,score:aiScoreCandidate_(q,item)};})
     .filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;});
   const top=scored[0], second=scored[1];
-  const candidates=scored.slice(0,8).map(function(x){return {code:x.item.code,name:x.item.name,score:x.score};});
-  if (!top) return {resolved:false,candidates:[],reason:'NO_MATCH',ruleId:'R46'};
+  const candidates=aiResolverCandidateRowsV2_(scored);
+  if (!top) return aiResolverEnrichResultV2_({resolved:false,candidates:[],reason:'NO_MATCH',ruleId:'R46'},0,0);
+
+  const margin = second ? Number(top.score-second.score) : Number(top.score);
+  let confidence = aiResolverScoreConfidenceV2_(top.score);
+  if (second) confidence = Math.min(98, confidence + Math.min(5, Math.floor(Math.max(0,margin)/45)));
+  else confidence = Math.min(98, confidence + 3);
 
   if (qModels.length) {
-    // Model exact nhưng còn nhiều variant: không tự đoán hậu tố/phiên bản.
-    if (second && top.score-second.score<60) return {resolved:false,candidates:candidates,reason:'MODEL_VARIANT_AMBIGUOUS',ruleId:'R12'};
-    return {resolved:true,item:top.item,score:top.score,candidates:candidates,reason:'EXACT_MODEL',ruleId:'R11'};
+    if (aiResolverVariantAmbiguityV2_(raw, pool)) {
+      return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'MODEL_VARIANT_AMBIGUOUS',ruleId:'R12'},Math.min(confidence,79),margin);
+    }
+    if (aiResolverConditionAmbiguityV2_(raw, pool)) {
+      return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'MODEL_CONDITION_AMBIGUOUS',ruleId:'R46'},Math.min(confidence,79),margin);
+    }
+    if (second && margin<60) return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'MODEL_VARIANT_AMBIGUOUS',ruleId:'R12'},Math.min(confidence,79),margin);
+    confidence = Math.max(confidence, AI_RESOLVER_CONFIG.EXACT_MODEL_CONFIDENCE);
+    return aiResolverEnrichResultV2_({resolved:true,item:top.item,score:top.score,candidates:candidates,reason:'EXACT_MODEL',ruleId:'R11'},confidence,margin);
   }
 
-  if (top.score<260) return {resolved:false,candidates:candidates,reason:'LOW_CONFIDENCE',ruleId:'R46'};
-  if (second && second.score>=170 && top.score-second.score<70) return {resolved:false,candidates:candidates,reason:'AMBIGUOUS',ruleId:'R46'};
-  return {resolved:true,item:top.item,score:top.score,candidates:candidates,reason:'HIGH_CONFIDENCE',ruleId:'R11'};
+  if (top.score<260) return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'LOW_CONFIDENCE',ruleId:'R46'},confidence,margin);
+  if (second && second.score>=170 && margin<70) return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'AMBIGUOUS',ruleId:'R46'},Math.min(confidence,79),margin);
+  if (confidence < AI_RESOLVER_CONFIG.AUTO_RESOLVE_MIN_CONFIDENCE) {
+    return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'LOW_CONFIDENCE_V2',ruleId:'R46'},confidence,margin);
+  }
+  confidence = Math.max(confidence, AI_RESOLVER_CONFIG.HIGH_CONFIDENCE_FLOOR);
+  return aiResolverEnrichResultV2_({resolved:true,item:top.item,score:top.score,candidates:candidates,reason:'HIGH_CONFIDENCE',ruleId:'R11'},confidence,margin);
 }
 
 function coreBusinessReasonV105_(operation, counterparty, note) {
@@ -3684,10 +3794,10 @@ function aiInventoryPreviewFromActionPlan_(payload) {
       if(operation!=='ADJUST'&&qty<=0) qty=aiInferQuantityFromCommand_(sourceMessage||command,identityText,slipNo,rawLines.length);
       if(operation==='ADJUST'){
         if(targetQty<0){unresolved.push({type:'INVALID_ADJUST',ruleId:'R08',slipNo:slipNo,itemText:identityText,message:'Điều chỉnh tồn phải có tồn mới không âm.',candidates:[{code:match.item.code,name:match.item.name}],planSlipIndex:slipIndex,planLineIndex:lineIndex});return;}
-        resolved.push({code:match.item.code,name:match.item.name,quantity:0,targetQuantity:targetQty,itemText:identityText,sourceExcerpt:identityText,resolverReason:match.reason});
+        resolved.push({code:match.item.code,name:match.item.name,quantity:0,targetQuantity:targetQty,itemText:identityText,sourceExcerpt:identityText,resolverReason:match.reason,resolverConfidence:Number(match.confidence||0),resolverVersion:String(match.resolverVersion||AI_RESOLVER_CONFIG.VERSION)});
       }else{
         if(qty<=0){unresolved.push({type:'INVALID_QTY',ruleId:'R46',slipNo:slipNo,itemText:identityText,message:'Thiếu số lượng lớn hơn 0.',candidates:[{code:match.item.code,name:match.item.name}],planSlipIndex:slipIndex,planLineIndex:lineIndex});return;}
-        resolved.push({code:match.item.code,name:match.item.name,quantity:qty,targetQuantity:-1,itemText:identityText,sourceExcerpt:identityText,resolverReason:match.reason});
+        resolved.push({code:match.item.code,name:match.item.name,quantity:qty,targetQuantity:-1,itemText:identityText,sourceExcerpt:identityText,resolverReason:match.reason,resolverConfidence:Number(match.confidence||0),resolverVersion:String(match.resolverVersion||AI_RESOLVER_CONFIG.VERSION)});
       }
     });
 
@@ -5138,16 +5248,16 @@ function aiChatSearchCatalog_(query) {
   stock58.forEach(function(x){by58[normalize_(x.code)]=x;});
   let raw145=[];try{const ss145=SpreadsheetApp.openById(WAREHOUSE_145_CONFIG.SPREADSHEET_ID);raw145=readWarehouse145Raw_(ss145.getSheetByName(WAREHOUSE_145_CONFIG.STOCK_SHEET));}catch(e){}
   const q145={};raw145.forEach(function(x){if(x.masterCode)q145[normalize_(x.masterCode)]=(q145[normalize_(x.masterCode)]||0)+Number(x.qty||0);});
-  const cands=(resolution.candidates||[]).slice(0,AI_CHAT_CONFIG.MAX_CANDIDATES).map(function(x){const s=by58[normalize_(x.code)]||{};return {code:x.code,name:x.name,unit:s.unit||'',qty58:Number(s.qty||0),qty145:Number(q145[normalize_(x.code)]||0),score:x.score};});
-  return {query:query,resolved:Boolean(resolution.resolved),reason:resolution.reason||'',strongModels:aiStrongModelTokens_(query),exactModelFound:aiStrongModelTokens_(query).length?resolution.reason!=='MODEL_NOT_FOUND':Boolean(resolution.resolved),item:resolution.resolved?(function(){const z=by58[normalize_(resolution.item.code)]||{};return {code:resolution.item.code,name:resolution.item.name,unit:z.unit||'',qty58:Number(z.qty||0),qty145:Number(q145[normalize_(resolution.item.code)]||0),referencePrice:Number(z.referencePrice||0),stockValue58:Number(z.stockValue||0),status58:String(z.actualStatus||z.status||statusOf_(z.qty,z.threshold||0)),threshold58:Number(z.threshold||0)};})():null,candidates:cands};
+  const cands=(resolution.candidates||[]).slice(0,AI_CHAT_CONFIG.MAX_CANDIDATES).map(function(x){const s=by58[normalize_(x.code)]||{};return {code:x.code,name:x.name,unit:s.unit||'',qty58:Number(s.qty||0),qty145:Number(q145[normalize_(x.code)]||0),score:x.score,confidence:Number(x.confidence||0)};});
+  return {query:query,resolved:Boolean(resolution.resolved),reason:resolution.reason||'',confidence:Number(resolution.confidence||0),margin:Number(resolution.margin||0),resolverVersion:String(resolution.resolverVersion||AI_RESOLVER_CONFIG.VERSION),strongModels:aiStrongModelTokens_(query),exactModelFound:aiStrongModelTokens_(query).length?resolution.reason!=='MODEL_NOT_FOUND':Boolean(resolution.resolved),item:resolution.resolved?(function(){const z=by58[normalize_(resolution.item.code)]||{};return {code:resolution.item.code,name:resolution.item.name,unit:z.unit||'',qty58:Number(z.qty||0),qty145:Number(q145[normalize_(resolution.item.code)]||0),referencePrice:Number(z.referencePrice||0),stockValue58:Number(z.stockValue||0),status58:String(z.actualStatus||z.status||statusOf_(z.qty,z.threshold||0)),threshold58:Number(z.threshold||0),resolutionConfidence:Number(resolution.confidence||0)};})():null,candidates:cands};
 }
 
 function aiChatGetStock_(codeOrQuery) {
   const q=String(codeOrQuery||'').trim();
   if(!q)return {found:false,message:'Thiếu mã/tên hàng.'};
   const search=aiChatSearchCatalog_(q);
-  if(search.resolved&&search.item){const x=search.item;return {found:true,item:x,total:Number(x.qty58||0)+Number(x.qty145||0),resolutionReason:search.reason};}
-  return {found:false,candidates:(search.candidates||[]).slice(0,5),reason:search.reason,message:search.reason==='MODEL_NOT_FOUND'?'Không có model chính xác trong danh mục; không tự ghép sang model gần giống.':'Tên/mã chưa đủ chắc chắn để chọn một SKU.'};
+  if(search.resolved&&search.item){const x=search.item;return {found:true,item:x,total:Number(x.qty58||0)+Number(x.qty145||0),resolutionReason:search.reason,resolutionConfidence:Number(search.confidence||0),resolverVersion:search.resolverVersion};}
+  return {found:false,candidates:(search.candidates||[]).slice(0,5),reason:search.reason,resolutionConfidence:Number(search.confidence||0),resolverVersion:search.resolverVersion,message:search.reason==='MODEL_NOT_FOUND'?'Không có model chính xác trong danh mục; không tự ghép sang model gần giống.':(search.reason==='MODEL_VARIANT_AMBIGUOUS'?'Model có nhiều phiên bản/variant; cần nói rõ WB/CH/ES/INKVIET/TOPZON/NP hoặc chọn đúng SKU.':(search.reason==='MODEL_CONDITION_AMBIGUOUS'?'Model có cả máy mới và đã qua sử dụng; cần nói rõ tình trạng.':'Tên/mã chưa đủ chắc chắn để chọn một SKU.'))};
 }
 
 function aiChatTodayMovements_(query, warehouse) {
@@ -5795,6 +5905,17 @@ function runRegressionTestsV109(){
 
 function runRegressionTestsV109FromMenu(){const r=runRegressionTestsV109();SpreadsheetApp.getUi().alert('Regression V10.9: '+r.passed+'/'+r.total+' pass'+(r.pass?' ✅':' ❌'));}
 
+function runRegressionTestsV1106(){
+  const base=runRegressionTestsV109();
+  const resolver=aiResolverV2SelfTest_();
+  const extra=(resolver.results||[]).map(function(x){return {name:'V10.10.6 · '+x.name,pass:Boolean(x.pass),detail:x.detail||{}};});
+  const merged=(base.results||[]).concat(extra);
+  return {appVersion:APP_VERSION,agentVersion:AI_AGENT_CONFIG.VERSION,resolverVersion:AI_RESOLVER_CONFIG.VERSION,total:merged.length,passed:merged.filter(function(x){return x.pass;}).length,failed:merged.filter(function(x){return !x.pass;}).length,pass:merged.every(function(x){return x.pass;}),baseTotal:base.total,resolverTests:extra.length,results:merged};
+}
+
+function runRegressionTestsV1106FromMenu(){const r=runRegressionTestsV1106();SpreadsheetApp.getUi().alert('Regression V10.10.6: '+r.passed+'/'+r.total+' pass'+(r.pass?' ✅':' ❌'));}
+
+
 function runRegressionTestsV108FromMenu() {
   const r=runRegressionTestsV108();
   SpreadsheetApp.getUi().alert('Regression V10.8: '+r.passed+'/'+r.total+' pass'+(r.pass?' ✅':' ❌'));
@@ -5896,6 +6017,38 @@ function runRegressionTestsV105() {
   vr=coreValidateActionPlanV105_(negAdj,{actor:'Thanh'}); add('Điều chỉnh âm','R08',vr.failures.map(function(x){return x.ruleId;}).join(','),vr.failures.some(function(x){return x.ruleId==='R08';}));
 
   return {appVersion:APP_VERSION,ruleset:CORE_V105_CONFIG.RULESET_VERSION,total:results.length,passed:results.filter(function(x){return x.pass;}).length,failed:results.filter(function(x){return !x.pass;}).length,pass:results.every(function(x){return x.pass;}),results:results};
+}
+
+function aiResolverV2SelfTest_() {
+  function item(code,name,aliases){
+    const x={code:code,name:name,unit:'Hộp',aliases:aliases||'',legacyNames:[]};
+    x.searchText=normalize_([code,name,aliases||''].join(' | '));
+    return x;
+  }
+  const catalog=[
+    item('TD-1001','Hộp mực in 12A/303/FX9 - WB','12A WB; 12A whitebox'),
+    item('TD-1002','Hộp mực in 12A/303/FX9 - TOPZON','12A TOPZON'),
+    item('TD-1003','Máy in Brother HL-2321D - CH','HL-2321D mới'),
+    item('TD-1004','Máy in Brother HL-2321D - đã qua sử dụng','HL-2321D cũ'),
+    item('TD-1005','Hộp mực in 83A - WB','83A WB')
+  ];
+  const tests=[];
+  function add(name,pass,detail){tests.push({name:name,pass:Boolean(pass),detail:detail||{}});}
+  let r=coreResolveSkuIdentityV105_('TD-1001 Hộp mực 12A WB',catalog);
+  add('Exact code confidence 100',r.resolved&&r.item.code==='TD-1001'&&r.confidence===100,r);
+  r=coreResolveSkuIdentityV105_('12A whitebox',catalog);
+  add('Exact alias resolves with high confidence',r.resolved&&r.item.code==='TD-1001'&&r.confidence>=96,r);
+  r=coreResolveSkuIdentityV105_('12A',catalog);
+  add('Bare model blocks variant guessing',!r.resolved&&r.reason==='MODEL_VARIANT_AMBIGUOUS'&&r.candidates.length>=2,r);
+  r=coreResolveSkuIdentityV105_('12A WB',catalog);
+  add('Explicit variant resolves correct SKU',r.resolved&&r.item.code==='TD-1001'&&r.confidence>=AI_RESOLVER_CONFIG.AUTO_RESOLVE_MIN_CONFIDENCE,r);
+  r=coreResolveSkuIdentityV105_('Brother HL-2321D',catalog);
+  add('Machine model blocks new/used guessing',!r.resolved&&r.reason==='MODEL_CONDITION_AMBIGUOUS',r);
+  r=coreResolveSkuIdentityV105_('Brother HL-2321D đã qua sử dụng',catalog);
+  add('Explicit used condition resolves correct machine',r.resolved&&r.item.code==='TD-1004'&&r.confidence>=AI_RESOLVER_CONFIG.AUTO_RESOLVE_MIN_CONFIDENCE,r);
+  r=coreResolveSkuIdentityV105_('Canon LBP2900',catalog);
+  add('Unknown exact model remains blocked',!r.resolved&&r.reason==='MODEL_NOT_FOUND',r);
+  return {appVersion:APP_VERSION,resolverVersion:AI_RESOLVER_CONFIG.VERSION,total:tests.length,passed:tests.filter(function(x){return x.pass;}).length,failed:tests.filter(function(x){return !x.pass;}).length,pass:tests.every(function(x){return x.pass;}),results:tests};
 }
 
 function runRegressionTestsV107() {
