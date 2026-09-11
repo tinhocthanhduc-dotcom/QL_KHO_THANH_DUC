@@ -322,6 +322,31 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 @media(max-width:920px){.ai-dual-workspace{grid-template-columns:1fr}.ai-execution-pane{position:static;top:auto;min-height:460px;max-height:none}.ai-conversation-pane .chat-messages{max-height:56dvh!important}.ai-secondary-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.ai-dual-workspace{gap:10px}.ai-conversation-pane,.ai-execution-pane{border-radius:15px}.ai-execution-head{padding:13px}.ai-execution-body{padding:11px}.ai-execution-actions{padding:10px 11px;position:sticky;bottom:0;z-index:4}.ai-execution-safety{padding:0 11px 10px}.ai-secondary-grid{grid-template-columns:1fr;gap:10px}.execution-empty{min-height:250px}.ai-execution-pane .ai-line{grid-template-columns:1fr!important}.ai-execution-pane .ai-line .move{text-align:left!important}}
 
+
+
+/* ===== V10.10.7 · AI WORKSPACE OVERLAP FIX ===== */
+#panel-ai{scroll-margin-top:126px;overflow:visible!important;padding-top:4px}
+#panel-ai .ai-tab-wrap{overflow:visible!important;position:relative;z-index:1}
+#panel-ai .ai-dual-workspace{align-items:start!important;position:relative!important;z-index:1!important}
+#panel-ai .ai-conversation-pane,
+#panel-ai .ai-execution-pane{top:auto!important;z-index:1!important;max-height:none!important}
+#panel-ai .ai-conversation-pane{position:relative!important;overflow:hidden!important}
+#panel-ai .ai-execution-pane{position:relative!important;overflow:hidden!important}
+#panel-ai .ai-head,
+#panel-ai .ai-execution-head{position:relative!important;top:auto!important;z-index:2!important}
+#panel-ai .chat-messages{max-height:calc(100vh - 455px)!important;min-height:360px!important;overflow-y:auto!important}
+#panel-ai .ai-execution-body{min-height:360px!important;overflow:auto!important}
+@media(max-width:1100px){
+  #panel-ai{scroll-margin-top:118px}
+  #panel-ai .chat-messages{max-height:55vh!important;min-height:320px!important}
+  #panel-ai .ai-execution-body{min-height:300px!important}
+}
+@media(max-width:760px){
+  #panel-ai{scroll-margin-top:108px;padding-top:2px}
+  #panel-ai .chat-messages{max-height:52dvh!important;min-height:300px!important}
+  #panel-ai .ai-execution-body{min-height:260px!important}
+}
+
 </style>
 </head>
 <body>
@@ -634,7 +659,7 @@ function savePrice(){if(!canPerm("UPDATE_PRICE"))return toast("Cần quyền ADM
 function openMap(row,sourceName,code){if(!canPerm("UPDATE_MAPPING"))return toast("Cần quyền ADMIN để sửa mapping");mapCtx={sheetRow:Number(row),sourceName};$("mapLabel").textContent=`Kho 145 · dòng ${row} · ${sourceName}`;$("mapInput").value=code||"";$("mapBack").classList.add("open")}
 function saveMap(){if(!canPerm("UPDATE_MAPPING"))return toast("Cần quyền ADMIN để sửa mapping");if(!mapCtx)return;const b=$("mapSave");b.disabled=true;b.textContent="Đang lưu...";google.script.run.withSuccessHandler(()=>{b.disabled=false;b.textContent="Lưu mapping";$("mapBack").classList.remove("open");toast("Đã cập nhật mapping Kho 145");mapCtx=null;setRefreshMode("Đã thay đổi · cập nhật Kho 145");load145(true)}).withFailureHandler(e=>{b.disabled=false;b.textContent="Lưu mapping";toast("Không lưu được mapping: "+errMsg(e))}).updateWarehouse145Mapping({...mapCtx,actor:currentActor(),masterCode:$("mapInput").value})}
 function transferDirectionFromType(type){type=String(type||"").toUpperCase();if(type.includes("145_58")||type.includes("BUY_58"))return{source:"145",dest:"58"};if(type.includes("58_145")||type.includes("BUY_145"))return{source:"58",dest:"145"};return null}
-function showTab(tab){const b=document.querySelector(`.tab[data-tab="${tab}"]`);if(!b)return;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");$("panel-"+tab).classList.add("active");setRefreshMode("Cập nhật thủ công");if(tab==="journal"){if(!journalLoaded)loadJournal(false)}else{if(tab==="transfer"&&!transferLoaded)loadTransferHistory(false);if(tab==="ai")initAiTab()}}
+function showTab(tab){const b=document.querySelector(`.tab[data-tab="${tab}"]`);if(!b)return;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");const panel=$("panel-"+tab);panel.classList.add("active");setRefreshMode("Cập nhật thủ công");if(tab==="journal"){if(!journalLoaded)loadJournal(false)}else{if(tab==="transfer"&&!transferLoaded)loadTransferHistory(false);if(tab==="ai")initAiTab()}requestAnimationFrame(()=>{const topBar=document.querySelector(".top"),tabs=$("tabs");const offset=(topBar?.offsetHeight||0)+(tabs?.offsetHeight||0)+14;const y=panel.getBoundingClientRect().top+window.scrollY-offset;window.scrollTo({top:Math.max(0,y),behavior:"smooth"})})}
 function addTransferFromAction(code,type,qty){const dir=transferDirectionFromType(type),x=state.combined.find(r=>norm(r.code)===norm(code));if(!dir||!x)return toast("Không xác định được hướng điều chuyển");if(Number(x.mappingCount||0)!==1)return toast("Kho 145 phải có đúng 1 dòng mapping trước khi tạo phiếu");if(transferCart.lines.length&&(transferCart.source!==dir.source||transferCart.dest!==dir.dest))return toast(`Phiếu hiện tại đang theo hướng ${transferCart.source} → ${transferCart.dest}. Hoàn tất hoặc xóa phiếu trước.`);transferCart.source=dir.source;transferCart.dest=dir.dest;const q=Math.max(1,Math.floor(Number(qty||1))),existing=transferCart.lines.find(r=>norm(r.code)===norm(code));if(existing)existing.qty=q;else transferCart.lines.push({code:x.code,name:x.name,qty:q});renderTransferCart();if($("detailBack")?.classList.contains("open"))closeDetail();showTab("transfer");toast(`Đã thêm ${x.code} vào phiếu điều chuyển`)}
 function addManualTransfer(){const q=norm($("transferManualSearch").value);if(!q)return toast("Nhập mã hoặc tên hàng cần chuyển");let matches=state.combined.filter(x=>norm(x.code)===q);if(!matches.length)matches=state.combined.filter(x=>x.searchText?.includes(q));if(matches.length!==1)return toast(matches.length?`Có ${matches.length} kết quả, hãy nhập chính xác mã TD-xxxx`:`Không tìm thấy hàng phù hợp`);const x=matches[0];if(Number(x.mappingCount||0)!==1)return toast("SKU này phải có đúng 1 dòng mapping tại Kho 145 trước khi điều chuyển");const dir=$("transferManualDirection").value==="145_58"?{source:"145",dest:"58"}:{source:"58",dest:"145"};if(transferCart.lines.length&&(transferCart.source!==dir.source||transferCart.dest!==dir.dest))return toast(`Phiếu hiện tại đang theo hướng ${transferCart.source} → ${transferCart.dest}. Hãy hoàn tất hoặc xóa phiếu trước.`);transferCart.source=dir.source;transferCart.dest=dir.dest;const existing=transferCart.lines.find(r=>norm(r.code)===norm(x.code));if(!existing)transferCart.lines.push({code:x.code,name:x.name,qty:1});$("transferManualSearch").value="";renderTransferCart();toast(`Đã thêm ${x.code}`)}
 function renderTransferCart(){const dir=$("transferDirection"),count=$("transferCartCount"),tbody=$("transferCartTable")?.querySelector("tbody");if(!dir||!count||!tbody)return;dir.textContent=transferCart.lines.length?`Kho ${transferCart.source} → Kho ${transferCart.dest}`:"Chưa chọn hướng";count.textContent=`${fmt(transferCart.lines.length)} dòng`;tbody.innerHTML=transferCart.lines.map(line=>{const x=state.combined.find(r=>norm(r.code)===norm(line.code));const src=transferCart.source==="58"?Number(x?.qty58||0):Number(x?.qty145||0),dst=transferCart.dest==="58"?Number(x?.qty58||0):Number(x?.qty145||0);return `<tr><td><strong>${esc(line.code)}</strong></td><td>${esc(line.name)}</td><td class="unit-cell">${esc(unitOf(line.code,line.name,x?.unit))}</td><td class="num">${fmt(src)}</td><td class="num">${fmt(dst)}</td><td class="num"><input data-transfer-qty-input="${esc(line.code)}" inputmode="numeric" value="${fmt(line.qty)}" style="width:92px;text-align:center"></td><td><button class="mini" data-transfer-remove="${esc(line.code)}">Bỏ</button></td></tr>`}).join("")||'<tr><td colspan="7" class="empty">Thêm mặt hàng từ cảnh báo hoặc tìm kiếm phía trên.</td></tr>';$("transferSubmit").disabled=!transferCart.lines.length}
