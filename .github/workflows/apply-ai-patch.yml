@@ -1,11 +1,11 @@
-name: Apply AI patch on dev
+name: Apply AI transform on dev
 
 on:
   push:
     branches:
       - dev-v10.10.6
     paths:
-      - ai_patch.diff
+      - ai_transform.py
 
 permissions:
   contents: write
@@ -21,14 +21,19 @@ jobs:
           ref: dev-v10.10.6
           fetch-depth: 0
 
-      - name: Validate and apply patch
+      - name: Apply deterministic transform
         shell: bash
         run: |
           set -euo pipefail
-          test -f ai_patch.diff
-          git apply --check ai_patch.diff
-          git apply ai_patch.diff
-          rm ai_patch.diff
+          test -f ai_transform.py
+          python3 ai_transform.py
+          rm ai_transform.py
+          rm -f ai_patch.diff
+
+      - name: Syntax checks
+        shell: bash
+        run: |
+          set -euo pipefail
           node --check code.js
           python3 - <<'PY'
           import re, pathlib, subprocess
@@ -40,12 +45,33 @@ jobs:
           grep -q "const APP_VERSION = 'V10.10.6';" code.js
           grep -q 'let APP_VERSION="V10.10.6";' Index.html
 
+      - name: Resolver regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp code.js /tmp/resolver_test.js
+          cat >> /tmp/resolver_test.js <<'JS'
+          const oldSuite = runRegressionTestsV105();
+          const v2Suite = aiResolverV2SelfTest_();
+          if (!oldSuite.pass) {
+            console.error('V10.5 regression failed', JSON.stringify(oldSuite));
+            process.exit(11);
+          }
+          if (!v2Suite.pass) {
+            console.error('Resolver V2 regression failed', JSON.stringify(v2Suite));
+            process.exit(12);
+          }
+          console.log('V10.5:', oldSuite.passed + '/' + oldSuite.total, 'PASS');
+          console.log('Resolver V2:', v2Suite.passed + '/' + v2Suite.total, 'PASS');
+          JS
+          node /tmp/resolver_test.js
+
       - name: Commit applied changes
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "ChatGPT AI Patch"
           git config user.email "ai-patch@users.noreply.github.com"
-          git add code.js Index.html ai_patch.diff
+          git add -A
           git commit -m "V10.10.6: Resolver V2 + Confidence Score [ai-applied]"
           git push origin HEAD:dev-v10.10.6
