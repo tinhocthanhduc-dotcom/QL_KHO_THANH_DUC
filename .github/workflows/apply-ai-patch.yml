@@ -5,7 +5,10 @@ on:
     branches:
       - dev-v10.10.6
     paths:
-      - ai_patch.diff
+      - ai_patch.part1
+      - ai_patch.part2
+      - ai_patch.part3
+      - ai_patch.part4
 
 permissions:
   contents: write
@@ -21,16 +24,30 @@ jobs:
           ref: dev-v10.10.6
           fetch-depth: 0
 
-      - name: Validate and apply patch
+      - name: Wait for all patch parts
+        id: parts
         shell: bash
         run: |
           set -euo pipefail
-          test -f ai_patch.diff
-          git apply --check ai_patch.diff
-          git apply ai_patch.diff
-          rm ai_patch.diff
+          if [ -f ai_patch.part1 ] && [ -f ai_patch.part2 ] && [ -f ai_patch.part3 ] && [ -f ai_patch.part4 ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Waiting for all 4 patch parts."
+          fi
+
+      - name: Validate and apply patch
+        if: steps.parts.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat ai_patch.part1 ai_patch.part2 ai_patch.part3 ai_patch.part4 > /tmp/ai_patch.diff
+          git apply --check /tmp/ai_patch.diff
+          git apply /tmp/ai_patch.diff
+          rm ai_patch.part1 ai_patch.part2 ai_patch.part3 ai_patch.part4
 
       - name: Syntax checks
+        if: steps.parts.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -46,6 +63,7 @@ jobs:
           grep -q 'let APP_VERSION="V10.10.6";' Index.html
 
       - name: Resolver regression checks
+        if: steps.parts.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -67,6 +85,7 @@ jobs:
           node /tmp/resolver_test.js
 
       - name: Commit applied changes
+        if: steps.parts.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
