@@ -1,0 +1,99 @@
+name: Package full app
+
+on:
+  push:
+    branches:
+      - dev-v10.10.6
+    paths:
+      - package_trigger.txt
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: dev-v10.10.6
+
+      - name: Verify source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check code.js
+          grep -q "const APP_VERSION = 'V10.10.7';" code.js
+          grep -q 'let APP_VERSION="V10.10.7";' Index.html
+
+      - name: Build full install package
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG="QL_KHO_THANH_DUC_V10.10.7_FULL"
+          mkdir -p "$PKG"
+          cp code.js "$PKG/code.js"
+          cp code.js "$PKG/Code.gs"
+          cp Index.html "$PKG/Index.html"
+          cp appsscript.json "$PKG/appsscript.json"
+          cat > "$PKG/.clasp.example.json" <<'EOF'
+          {
+            "scriptId": "PASTE_YOUR_APPS_SCRIPT_ID_HERE",
+            "rootDir": "."
+          }
+          EOF
+          cat > "$PKG/README_CAI_DAT.txt" <<'EOF'
+          QL KHO THANH DUC - V10.10.7 FULL
+          =================================
+
+          NOI DUNG BO CAI:
+          - Code.gs      : backend Apps Script day du
+          - code.js      : ban local dung voi clasp
+          - Index.html   : giao dien web app
+          - appsscript.json : manifest Apps Script
+          - .clasp.example.json : mau cau hinh clasp
+
+          CAI DAT BANG CLASP:
+          1) Cai Node.js va clasp:
+             npm.cmd install -g @google/clasp
+          2) Dang nhap:
+             clasp.cmd login
+          3) Tao file .clasp.json tu .clasp.example.json va thay Script ID.
+          4) Kiem tra dung project truoc khi push.
+          5) Push source:
+             clasp.cmd push
+          6) Cap nhat deployment Web App hien co neu can.
+
+          LUU Y BAO MAT:
+          - BO CAI KHONG CHUA OAuth token / .clasprc.json.
+          - OPENAI_API_KEY phai duoc khai bao trong Apps Script > Project Settings > Script Properties.
+          - Source hien tai dang tro den Spreadsheet ID kho hien hanh; neu cai tren moi truong khac, sua cau hinh truoc khi chay.
+          - Khong hard-delete phieu cu; V10.10.7 dung Historical Voucher Control.
+
+          PHIEN BAN: V10.10.7
+          EOF
+          cat > "$PKG/INSTALL_WINDOWS.ps1" <<'EOF'
+          $ErrorActionPreference = "Stop"
+          Write-Host "QL KHO THANH DUC V10.10.7 - Setup helper" -ForegroundColor Cyan
+          if (-not (Get-Command clasp.cmd -ErrorAction SilentlyContinue)) {
+            Write-Host "Chua co clasp. Cai bang: npm.cmd install -g @google/clasp" -ForegroundColor Yellow
+            exit 1
+          }
+          if (-not (Test-Path ".clasp.json")) {
+            Write-Host "Chua co .clasp.json. Hay copy .clasp.example.json thanh .clasp.json va dien Script ID." -ForegroundColor Yellow
+            exit 2
+          }
+          Write-Host "Kiem tra project truoc khi push:" -ForegroundColor Green
+          clasp.cmd status
+          Write-Host "Neu dung project, chay: clasp.cmd push" -ForegroundColor Green
+          EOF
+          printf 'V10.10.7\n' > "$PKG/VERSION.txt"
+
+      - name: Upload full package
+        uses: actions/upload-artifact@v4
+        with:
+          name: QL_KHO_THANH_DUC_V10.10.7_FULL
+          path: QL_KHO_THANH_DUC_V10.10.7_FULL/
+          if-no-files-found: error
+          retention-days: 30
