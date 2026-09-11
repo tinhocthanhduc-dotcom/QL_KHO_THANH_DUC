@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.10.6';
+const APP_VERSION = 'V10.10.7';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -174,7 +174,7 @@ const AI_CHAT_CONFIG = Object.freeze({
 });
 
 const AI_AGENT_CONFIG = Object.freeze({
-  VERSION: 'AGENT_V3.1_RESOLVER_V2_2026-09-11',
+  VERSION: 'AGENT_V3.2_HISTORICAL_VOUCHER_2026-09-11',
   STATE_VERSION: 'CTX_V1',
   MAX_TOOL_ROUNDS: 3,
   MAX_TOOL_RESULTS: 24,
@@ -193,6 +193,14 @@ const AI_RESOLVER_CONFIG = Object.freeze({
   EXACT_MODEL_CONFIDENCE: 96,
   HIGH_CONFIDENCE_FLOOR: 88,
   MAX_CANDIDATES: 8
+});
+
+// V10.10.7 · Historical Voucher Control: lịch sử bất biến; sửa/hủy bằng giao dịch bù có audit.
+const HISTORICAL_VOUCHER_CONFIG = Object.freeze({
+  VERSION: 'HIST_VOUCHER_V1_2026-09-11',
+  POLICY: 'COMPENSATING_TRANSACTION_ONLY',
+  MAX_VOUCHER_ROWS: 200,
+  ORIGINAL_IMMUTABLE: true
 });
 
 const PROACTIVE_V108_CONFIG = Object.freeze({
@@ -4828,6 +4836,7 @@ function aiRunChatTools_(requests, defaultWarehouse) {
       if (type === 'SEARCH_CATALOG') out.push({request:r,result:aiChatSearchCatalog_(r.query || r.code)});
       else if (type === 'GET_STOCK') out.push({request:r,result:aiChatGetStock_(r.code || r.query)});
       else if (type === 'GET_ITEM_HISTORY') out.push({request:r,result:aiChatItemHistoryV106_(r.code || r.query, r.warehouse || 'all', r.limit)});
+      else if (type === 'GET_VOUCHER') out.push({request:r,result:aiChatGetVoucherV1107_(r.query || r.code, r.warehouse || 'all')});
       else if (type === 'GET_MOVEMENTS') out.push({request:r,result:aiChatMovementsRangeV106_(r.query, r.warehouse || defaultWarehouse, r.from_date, r.to_date, r.limit)});
       else if (type === 'GET_OPERATIONAL_REPORT') out.push({request:r,result:aiChatOperationalReportV106_(r.warehouse || 'all')});
       else if (type === 'GET_PROACTIVE_REPORT') out.push({request:r,result:aiChatProactiveReport_(r.warehouse || 'all')});
@@ -5136,7 +5145,7 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
   const toolSchema = {
     type:'object',additionalProperties:false,
     properties:{
-      type:{type:'string',enum:['SEARCH_CATALOG','GET_STOCK','GET_ITEM_HISTORY','GET_MOVEMENTS','GET_OPERATIONAL_REPORT','GET_PROACTIVE_REPORT','GET_RECENT_VOUCHERS','GET_TODAY_MOVEMENTS','GET_TODAY_SUMMARY']},
+      type:{type:'string',enum:['SEARCH_CATALOG','GET_STOCK','GET_ITEM_HISTORY','GET_VOUCHER','GET_MOVEMENTS','GET_OPERATIONAL_REPORT','GET_PROACTIVE_REPORT','GET_RECENT_VOUCHERS','GET_TODAY_MOVEMENTS','GET_TODAY_SUMMARY']},
       query:{type:'string'},code:{type:'string'},warehouse:{type:'string',enum:['58','145','all','']},
       from_date:{type:'string'},to_date:{type:'string'},limit:{type:'integer',minimum:0,maximum:500}
     },
@@ -5157,8 +5166,11 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
     'TIN NHẮN MỚI NHẤT có ưu tiên cao nhất. Draft cũ và agentState chỉ dùng làm ngữ cảnh; nếu người dùng sửa model/hãng thì phải bỏ identity cũ.',
     'AgentState có thể chứa mặt hàng vừa nói. Khi người dùng nói “cái đó”, “mã đó”, “xuất tiếp”, “nhập tiếp”, “phần còn lại”, hãy dùng đúng mặt hàng trong AgentState nếu chỉ có một lựa chọn rõ. Không bịa tham chiếu khi state có nhiều item.',
     'Khi hỏi tồn, số liệu, lịch sử, phiếu, báo cáo hoặc “còn lại/xuất hết”, PHẢI dùng tool live phù hợp; không trả số từ trí nhớ hội thoại.',
-    'SEARCH_CATALOG để tìm SKU; GET_STOCK để đọc tồn live 2 kho; GET_ITEM_HISTORY để xem lịch sử một mã; GET_MOVEMENTS cho hôm qua/ngày/range; GET_RECENT_VOUCHERS để liệt kê phiếu; GET_OPERATIONAL_REPORT cho báo cáo tài chính/tồn; GET_PROACTIVE_REPORT cho câu hỏi quản trị như ưu tiên hôm nay, cần mua gì, nên điều chuyển gì, hàng nào xuất nhanh/chậm hoặc bất thường.',
+    'SEARCH_CATALOG để tìm SKU; GET_STOCK để đọc tồn live 2 kho; GET_ITEM_HISTORY để xem lịch sử một mã; GET_VOUCHER để đọc chính xác toàn bộ dòng của một số phiếu; GET_MOVEMENTS cho hôm qua/ngày/range; GET_RECENT_VOUCHERS để liệt kê phiếu; GET_OPERATIONAL_REPORT cho báo cáo tài chính/tồn; GET_PROACTIVE_REPORT cho câu hỏi quản trị như ưu tiên hôm nay, cần mua gì, nên điều chuyển gì, hàng nào xuất nhanh/chậm hoặc bất thường.',
     'Có thể dùng nhiều vòng tool. Nếu kết quả vòng đầu cho mã TD, vòng sau được phép GET_STOCK hoặc GET_ITEM_HISTORY bằng mã đó. Không lặp lại cùng một tool request.',
+    'Nếu người dùng yêu cầu sửa/hủy/xóa/điều chỉnh phiếu cũ, bắt buộc gọi GET_VOUCHER đúng số phiếu trước khi lập Action Plan; không suy đoán nội dung phiếu từ hội thoại.',
+    'Không hard-delete và không sửa trực tiếp dòng lịch sử đã ghi. "xóa phiếu" = VOID/HỦY bằng bút toán đảo; "sửa phiếu" = đảo phần sai rồi lập giao dịch đúng. note phải chứa số phiếu gốc dạng [VOID SOPHIEU] hoặc [CORRECT SOPHIEU].',
+    'Bút toán sửa/hủy phiếu cũ mặc định ghi ngày hiện tại để bảo toàn chuỗi tồn và audit. Riêng giao dịch bị thiếu nhưng chưa từng ghi có thể dùng transaction_date ngày cũ đúng theo yêu cầu người dùng.',
     'Khi người dùng hỏi “hôm nay nên làm gì”, “có gì bất thường”, “cần mua gì”, “nên điều chuyển gì”, “hàng nào bán nhanh/chậm”, “tồn lâu” hoặc câu tương đương, phải dùng GET_PROACTIVE_REPORT. Phân biệt rõ dữ liệu thực tế và heuristic: độ phủ ngày/tồn chậm chỉ là tín hiệu quản trị, không phải lệnh mua tự động.',
     'Nếu SEARCH_CATALOG báo MODEL_NOT_FOUND/exactModelFound=false cho model rõ, không được tự đổi sang model gần giống.',
     'Identity bắt buộc giữ nguyên: TD code → model → hãng → hậu tố/variant → điều kiện hàng. HL-2361DN khác HL-2321D; GI-71C khác GI-790C; CH/WB/ES/TOPZON/NP/INKVIET/PCS/NOBOX là độc lập.',
@@ -5187,6 +5199,36 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
   if(status<200||status>=300){const msg=json&&json.error&&json.error.message?json.error.message:text.slice(0,500);throw new Error('OpenAI API lỗi '+status+': '+msg);}
   const out=aiExtractResponseText_(json);if(!out)throw new Error('AI không trả nội dung hội thoại.');
   try{return JSON.parse(out);}catch(e){throw new Error('Không đọc được quyết định hội thoại từ AI.');}
+}
+
+function aiExtractVoucherNoV1107_(text) {
+  const m=String(text||'').toUpperCase().match(/\b(?:PXK|PNK|KK|DCK)-\d{8}-[A-Z0-9]+\b/);
+  return m ? m[0] : '';
+}
+
+function aiHistoricalVoucherRequestV1107_(text) {
+  const n=normalize_(text);
+  return /(sua|chinh sua|huy|xoa|void|dieu chinh).*(phieu|pxk|pnk|dck|kk)|(?:pxk|pnk|dck|kk).*?(sua|huy|xoa|void|dieu chinh)/.test(n);
+}
+
+function aiChatGetVoucherV1107_(voucherText, warehouse) {
+  const voucher=aiExtractVoucherNoV1107_(voucherText) || String(voucherText||'').trim().toUpperCase();
+  if(!voucher) return {found:false,reason:'MISSING_VOUCHER',message:'Thiếu số phiếu cần tra.'};
+  warehouse=['58','145','all'].indexOf(String(warehouse))>=0?String(warehouse):'all';
+  const data=getJournalHistory({warehouse:warehouse,query:voucher,allDates:true,limit:HISTORICAL_VOUCHER_CONFIG.MAX_VOUCHER_ROWS});
+  const rows=(data.rows||[]).filter(function(r){return String(r.voucher||'').trim().toUpperCase()===voucher;});
+  if(!rows.length) return {found:false,voucher:voucher,warehouse:warehouse,reason:'VOUCHER_NOT_FOUND',message:'Không tìm thấy đúng số phiếu '+voucher+'.'};
+  return {found:true,voucher:voucher,warehouse:warehouse,totalLines:rows.length,originalImmutable:true,correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,rows:rows.map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,type:r.type,input:r.input,output:r.output,before:r.before,after:r.after,person:r.person,reason:r.reason,note:r.note};})};
+}
+
+function aiHistoricalVoucherSelfTestV1107_() {
+  const t=[];function add(name,pass){t.push({name:name,pass:Boolean(pass)});}
+  add('extract PXK',aiExtractVoucherNoV1107_('Hủy PXK-20260905-003')==='PXK-20260905-003');
+  add('extract PNK',aiExtractVoucherNoV1107_('sửa pnk-20260903-12')==='PNK-20260903-12');
+  add('detect sửa',aiHistoricalVoucherRequestV1107_('Sửa phiếu PXK-20260905-003'));
+  add('detect hủy',aiHistoricalVoucherRequestV1107_('Hủy PXK-20260905-003'));
+  add('query thường không phải sửa',!aiHistoricalVoucherRequestV1107_('PXK-20260905-003 có những gì?'));
+  return {version:HISTORICAL_VOUCHER_CONFIG.VERSION,total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
 }
 
 function aiChatItemHistoryV106_(codeOrQuery, warehouse, limit) {
