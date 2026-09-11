@@ -1,11 +1,11 @@
-name: Apply AI transform on dev
+name: Apply AI patch on dev
 
 on:
   push:
     branches:
       - dev-v10.10.6
     paths:
-      - ai_transform.py
+      - ai_patch.diff
 
 permissions:
   contents: write
@@ -21,14 +21,14 @@ jobs:
           ref: dev-v10.10.6
           fetch-depth: 0
 
-      - name: Apply deterministic transform
+      - name: Validate and apply patch
         shell: bash
         run: |
           set -euo pipefail
-          test -f ai_transform.py
-          python3 ai_transform.py
-          rm ai_transform.py
-          rm -f ai_patch.diff
+          test -f ai_patch.diff
+          git apply --check ai_patch.diff
+          git apply ai_patch.diff
+          rm ai_patch.diff
 
       - name: Syntax checks
         shell: bash
