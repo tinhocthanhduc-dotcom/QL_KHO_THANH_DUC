@@ -42,8 +42,8 @@ jobs:
         run: |
           set -euo pipefail
           cat ai_patch.part1 ai_patch.part2 ai_patch.part3 ai_patch.part4 > /tmp/ai_patch.diff
-          git apply --check /tmp/ai_patch.diff
-          git apply /tmp/ai_patch.diff
+          git apply --check --ignore-space-change --ignore-whitespace /tmp/ai_patch.diff
+          git apply --ignore-space-change --ignore-whitespace /tmp/ai_patch.diff
           rm ai_patch.part1 ai_patch.part2 ai_patch.part3 ai_patch.part4
 
       - name: Syntax checks
