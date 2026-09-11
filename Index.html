@@ -294,6 +294,34 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 @media(max-width:900px){.tabs{top:60px}.ai-empty-signals{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-side{grid-template-columns:1fr!important}.value-money{font-size:20px!important}.statusbar #statusDetail{display:none}}
 @media(max-width:560px){.top{padding:8px 10px!important}.title h1{font-size:20px!important}.title p{font-size:10px!important}.top-actions{display:flex!important}.tools-menu{position:fixed;top:62px;right:10px}.statusbar{overflow:visible!important;flex-wrap:wrap!important}.health-toggle{margin-left:auto}.status-diagnostics.open{display:grid;grid-template-columns:1fr 1fr}.kpis-priority{display:flex!important;overflow-x:auto!important;scroll-snap-type:x proximity;padding-bottom:4px}.kpis-priority .kpi{min-width:150px;scroll-snap-align:start}.ai-empty-signals{grid-template-columns:1fr 1fr}}
 
+
+
+/* ===== V10.10.7 · AI DUAL WORKSPACE UX/UI ===== */
+.ai-dual-workspace{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(360px,.85fr);gap:14px;align-items:start}
+.ai-conversation-pane{min-width:0;overflow:hidden;border:1px solid #dfe5ee;border-radius:18px;box-shadow:0 10px 30px rgba(15,23,42,.06)}
+.ai-conversation-pane .ai-head{border-bottom:1px solid #eef1f5;background:linear-gradient(180deg,#fff,#fbfdff)}
+.ai-pane-eyebrow{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#1d4ed8;margin-bottom:3px}
+.ai-conversation-pane .chat-messages{min-height:420px!important;max-height:calc(100vh - 450px)!important}
+.ai-execution-pane{position:sticky;top:82px;min-width:0;min-height:620px;max-height:calc(100vh - 100px);display:flex;flex-direction:column;background:#fff;border:1px solid #dfe5ee;border-radius:18px;box-shadow:0 10px 30px rgba(15,23,42,.07);overflow:hidden}
+.ai-execution-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 16px 13px;border-bottom:1px solid #e8edf4;background:linear-gradient(180deg,#f8fbff,#fff)}
+.ai-execution-head h3{font-size:18px;margin:0 0 4px;color:#172033}.ai-execution-head p{margin:0;color:#667085;font-size:11px;line-height:1.45}
+.execution-status{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;border-radius:999px;padding:6px 9px;font-size:10.5px;font-weight:900;border:1px solid #d0d5dd;background:#f8fafc;color:#475467;white-space:nowrap}
+.execution-status::before{content:'';width:7px;height:7px;border-radius:50%;background:#94a3b8}
+.execution-status.busy{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.execution-status.busy::before{background:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.execution-status.pending{background:#fff7ed;border-color:#fed7aa;color:#9a3412}.execution-status.pending::before{background:#f59e0b}
+.execution-status.blocked{background:#fef2f2;border-color:#fecaca;color:#991b1b}.execution-status.blocked::before{background:#ef4444}
+.execution-status.success{background:#ecfdf3;border-color:#abefc6;color:#067647}.execution-status.success::before{background:#22c55e}
+.ai-execution-body{flex:1;min-height:0;overflow:auto;padding:14px;background:#fbfcfe}
+.ai-execution-pane .ai-preview{display:block;min-height:0!important;padding:0!important;margin:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.execution-empty{display:flex;min-height:350px;align-items:center;justify-content:center;text-align:center;padding:22px}.execution-empty-inner{max-width:300px}.execution-empty-icon{width:54px;height:54px;border-radius:16px;margin:0 auto 13px;display:grid;place-items:center;background:#eef4ff;color:#1d4ed8;font-size:25px}.execution-empty h4{margin:0 0 6px;font-size:16px;color:#172033}.execution-empty p{margin:0;color:#667085;font-size:11.5px;line-height:1.55}.execution-empty .execution-flow{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:14px}.execution-flow span{border:1px solid #e4e7ec;background:#fff;border-radius:999px;padding:4px 7px;font-size:9.5px;font-weight:800;color:#667085}
+.ai-execution-pane .ai-preview.ready,.ai-execution-pane .ai-preview.warn{border:0!important;background:transparent!important}
+.ai-execution-pane .ai-preview>h3{margin:1px 0 10px;font-size:16px!important}.ai-execution-pane .ai-batch-summary{border:1px solid #bfdbfe;background:#eff6ff;border-radius:12px;padding:10px 11px;margin-bottom:10px;font-size:11.5px;line-height:1.5;color:#1e3a8a}.ai-execution-pane .ai-slip{background:#fff;border:1px solid #e4e7ec;border-radius:13px;margin-top:9px;padding:11px!important}.ai-execution-pane .ai-line{grid-template-columns:90px minmax(0,1fr) 125px!important;gap:8px!important;padding:9px 0!important}.ai-execution-pane .ai-candidate{background:#fff;border:1px solid #fed7aa;border-radius:12px;padding:11px;margin-top:9px}
+.ai-execution-actions{display:flex;gap:8px;padding:12px 14px;border-top:1px solid #e8edf4;background:#fff}.ai-execution-actions .action{flex:1;justify-content:center}.ai-execution-actions .secondary{background:#fff;color:#475467;border-color:#d0d5dd}.ai-execution-actions .secondary:hover{background:#f8fafc}.ai-execution-safety{padding:0 14px 12px;background:#fff;color:#667085;font-size:10px;line-height:1.45}.ai-execution-safety strong{color:#344054}
+.execution-success{padding:18px 14px;text-align:center}.execution-success-icon{width:58px;height:58px;border-radius:18px;margin:3px auto 13px;display:grid;place-items:center;background:#dcfce7;color:#15803d;font-size:28px}.execution-success h4{margin:0 0 5px;font-size:17px;color:#166534}.execution-success p{margin:0;color:#667085;font-size:11.5px;line-height:1.55}.execution-success-vouchers{margin-top:13px;border:1px solid #abefc6;background:#f0fdf4;border-radius:11px;padding:9px;color:#166534;font-size:11px;font-weight:800;overflow-wrap:anywhere}
+.ai-secondary-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr);gap:14px;margin-top:14px}.ai-secondary-grid .ai-side-card{margin:0!important;box-shadow:0 6px 20px rgba(15,23,42,.045)!important}.ai-secondary-grid .ai-brief-list{max-height:260px!important}.ai-secondary-grid .ai-recent-list{max-height:260px!important}
+@media(max-width:920px){.ai-dual-workspace{grid-template-columns:1fr}.ai-execution-pane{position:static;top:auto;min-height:460px;max-height:none}.ai-conversation-pane .chat-messages{max-height:56dvh!important}.ai-secondary-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.ai-dual-workspace{gap:10px}.ai-conversation-pane,.ai-execution-pane{border-radius:15px}.ai-execution-head{padding:13px}.ai-execution-body{padding:11px}.ai-execution-actions{padding:10px 11px;position:sticky;bottom:0;z-index:4}.ai-execution-safety{padding:0 11px 10px}.ai-secondary-grid{grid-template-columns:1fr;gap:10px}.execution-empty{min-height:250px}.ai-execution-pane .ai-line{grid-template-columns:1fr!important}.ai-execution-pane .ai-line .move{text-align:left!important}}
+
 </style>
 </head>
 <body>
@@ -376,55 +404,81 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
     </div>
   </section>
 
-<section class="panel" id="panel-ai"><div class="ai-tab-wrap"><div class="ai-tab-layout"><div class="ai-panel chat-shell">
-  <div class="ai-head"><div><h2>✨ Trợ lý AI kho</h2><p>AI Agent V3: vừa xử lý tác vụ kho, vừa phân tích vận hành 30/90 ngày để chủ động chỉ ra ưu tiên, điều chuyển, hàng cần mua và tồn chậm. Ghi kho vẫn cần anh xác nhận.</p></div></div>
-  <div class="ai-body" style="padding-bottom:0!important">
-    <div class="chat-topbar">
-      <div class="chat-context"><input id="aiActor" placeholder="Người thực hiện (ví dụ: Thanh, Phong)"><select id="aiDefaultWarehouse"><option value="58">Kho mặc định: 58</option><option value="145">Kho mặc định: 145</option></select></div>
-      <div class="chat-tools"><span class="module-chip" id="aiStatusChip">AI: chưa kiểm tra</span><span class="module-chip" id="aiContextChip">Ngữ cảnh: trống</span><button class="mini" id="aiClear">Cuộc trò chuyện mới</button></div>
+<section class="panel" id="panel-ai">
+  <div class="ai-tab-wrap">
+    <div class="ai-dual-workspace">
+      <div class="ai-panel chat-shell ai-conversation-pane">
+        <div class="ai-head">
+          <div><div class="ai-pane-eyebrow">AI CONVERSATION</div><h2>🤖 Trợ lý AI kho</h2><p>Tra cứu, phân tích và giao việc bằng ngôn ngữ tự nhiên. AI chỉ chuẩn bị nghiệp vụ; ghi sổ nằm ở cửa sổ Thực hiện lệnh.</p></div>
+        </div>
+        <div class="ai-body" style="padding-bottom:0!important">
+          <div class="chat-topbar">
+            <div class="chat-context"><input id="aiActor" placeholder="Người thực hiện (ví dụ: Thanh, Phong)"><select id="aiDefaultWarehouse"><option value="58">Kho mặc định: 58</option><option value="145">Kho mặc định: 145</option></select></div>
+            <div class="chat-tools"><span class="module-chip" id="aiStatusChip">AI: chưa kiểm tra</span><span class="module-chip" id="aiContextChip">Ngữ cảnh: trống</span><button class="mini" id="aiClear">Cuộc trò chuyện mới</button></div>
+          </div>
+          <div class="note" id="aiStatusText" style="margin-bottom:8px">--</div>
+        </div>
+        <div class="chat-messages" id="aiMessages"><div class="chat-empty"><h3>Chào anh 👋</h3><p>Anh cứ nói như đang giao việc cho nhân viên kho. Khi có nghiệp vụ cần ghi, hệ thống sẽ chuyển Action Plan sang cửa sổ bên phải để anh kiểm tra trước.</p></div></div>
+        <div class="chat-composer">
+          <div class="chat-compose-row"><textarea class="chat-input" id="aiCommand" placeholder="Nhắn cho Trợ lý AI... (Enter để gửi, Shift+Enter xuống dòng)"></textarea><button class="chat-send" id="aiAnalyze">Gửi</button></div>
+          <div class="chat-suggestions">
+            <button class="chat-suggestion" data-ai-example="Kiểm tra tồn kho của mã hoặc tên hàng: ">🔎 Tra tồn kho</button>
+            <button class="chat-suggestion" data-ai-example="Nhập kho: ">📥 Nhập kho</button>
+            <button class="chat-suggestion" data-ai-example="Xuất kho: ">📤 Xuất kho</button>
+            <button class="chat-suggestion" data-ai-example="Điều chuyển từ Kho 58 sang Kho 145: ">⇄ Điều chuyển kho</button>
+            <button class="chat-suggestion" data-ai-example="Kiểm kho và điều chỉnh tồn: ">✓ Kiểm kho</button>
+            <button class="chat-suggestion" data-ai-example="Cho tôi xem phiếu ">🧾 Tra / sửa phiếu</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="ai-execution-pane" aria-label="Thực hiện lệnh kho">
+        <div class="ai-execution-head">
+          <div><div class="ai-pane-eyebrow">EXECUTION CONSOLE</div><h3>⚙️ Thực hiện lệnh</h3><p>Nguồn sự thật là dữ liệu live và Rule Engine. Chỉ ghi sổ sau khi anh xác nhận.</p></div>
+          <span class="execution-status idle" id="aiExecutionStatus">Chưa có lệnh</span>
+        </div>
+        <div class="ai-execution-body">
+          <div class="ai-preview execution-placeholder" id="aiPreview">
+            <div class="execution-empty"><div class="execution-empty-inner"><div class="execution-empty-icon">⌁</div><h4>Chưa có Action Plan</h4><p>Hãy giao việc ở cửa sổ Trợ lý AI. Khi AI hiểu được nghiệp vụ, preview nhập/xuất/điều chuyển/kiểm kho sẽ xuất hiện tại đây.</p><div class="execution-flow"><span>AI hiểu ý</span><span>Rule Engine</span><span>Fresh-read tồn</span><span>Anh xác nhận</span></div></div></div>
+          </div>
+        </div>
+        <div class="ai-execution-actions">
+          <button class="action secondary" id="aiExecutionCancel" style="display:none">Hủy lệnh</button>
+          <button class="action primary" id="aiExecute" disabled style="display:none">Xác nhận & ghi kho</button>
+        </div>
+        <div class="ai-execution-safety"><strong>Kiểm soát:</strong> AI không ghi trực tiếp. Backend đọc tồn live lần cuối, kiểm tra quyền, chống trùng và rollback nếu hậu kiểm lỗi.</div>
+      </aside>
     </div>
-    <div class="note" id="aiStatusText" style="margin-bottom:8px">--</div>
-  </div>
-  <div class="chat-messages" id="aiMessages"><div class="chat-empty"><h3>Chào anh 👋</h3><p>Anh cứ nói như đang giao việc cho nhân viên kho. Ví dụ: “Xuất 2 hộp 12A Topzon cho khách”, “Cái MF241D vừa nói nhập 1 máy từ kho thu mua”, hoặc “12A Topzon còn bao nhiêu?”.</p></div></div>
-  <div class="chat-action-preview"><div class="ai-preview" id="aiPreview" style="display:none"></div><div class="ai-actions" style="margin-bottom:0"><button class="action primary" id="aiExecute" disabled style="display:none">Xác nhận & ghi kho</button></div></div>
-  <div class="chat-composer">
-    <div class="chat-compose-row"><textarea class="chat-input" id="aiCommand" placeholder="Nhắn cho Trợ lý AI... (Enter để gửi, Shift+Enter xuống dòng)"></textarea><button class="chat-send" id="aiAnalyze">Gửi</button></div>
-    <div class="chat-suggestions">
-      <button class="chat-suggestion" data-ai-example="Kiểm tra tồn kho của mã hoặc tên hàng: ">🔎 Tra tồn kho</button>
-      <button class="chat-suggestion" data-ai-example="Nhập kho: ">📥 Nhập kho</button>
-      <button class="chat-suggestion" data-ai-example="Xuất kho: ">📤 Xuất kho</button>
-      <button class="chat-suggestion" data-ai-example="Điều chuyển từ Kho 58 sang Kho 145: ">⇄ Điều chuyển kho</button>
-      <button class="chat-suggestion" data-ai-example="Kiểm kho và điều chỉnh tồn: ">✓ Kiểm kho</button>
-      <button class="chat-suggestion" data-ai-example="Cho tôi xem phiếu ">🧾 Tra / sửa phiếu</button>
+
+    <div class="ai-secondary-grid">
+      <div class="ai-side-card">
+        <div class="ai-side-head"><h3>📊 Bản tin vận hành</h3><button class="mini" id="aiOpsRefresh">Phân tích live</button></div>
+        <div class="note" id="aiOpsMeta">Chưa tải bản tin.</div>
+        <div class="ai-brief-grid">
+          <div class="ai-signal"><span>Điều chuyển</span><strong class="purple" id="aiOpsTransfer">—</strong></div>
+          <div class="ai-signal"><span>Cần mua</span><strong class="red" id="aiOpsPurchase">—</strong></div>
+          <div class="ai-signal"><span>Độ phủ thấp</span><strong class="amber" id="aiOpsCoverage">—</strong></div>
+          <div class="ai-signal"><span>Không xuất 90 ngày</span><strong id="aiOpsSlow">—</strong></div>
+        </div>
+        <div class="ai-brief-list" id="aiOpsList"><div class="note">AI sẽ đọc tồn 2 kho và lịch sử 90 ngày khi mở tab này.</div></div>
+        <div class="ai-quick-grid">
+          <button class="mini primary" data-ai-quick="Hôm nay có gì cần ưu tiên trong 2 kho?">Hỏi AI ưu tiên</button>
+          <button class="mini" data-ai-quick="Mã nào nên điều chuyển giữa Kho 58 và Kho 145?">Điều chuyển</button>
+          <button class="mini" data-ai-quick="Hàng nào đang có tồn nhưng 90 ngày không xuất?">Tồn lâu</button>
+          <button class="mini" data-ai-quick="Hàng nào xuất nhiều nhất 30 ngày và độ phủ tồn thấp?">Bán nhanh</button>
+        </div>
+        <div class="ai-brief-note">Các chỉ số tốc độ xuất/độ phủ là tín hiệu quản trị. App không tự mua hàng hoặc tự điều chuyển.</div>
+      </div>
+      <div class="ai-side-card">
+        <div class="ai-side-head"><h3>🕘 Lệnh gần đây</h3><button class="mini" id="aiRecentReload">Tải lại</button></div>
+        <div class="ai-recent-list" id="aiRecentList"><div class="note">Mở tab AI để tải lịch sử lệnh.</div></div>
+        <div class="note" style="margin-top:9px">Bấm một lệnh để đưa vào ô chat và chỉnh lại nếu cần.</div>
+      </div>
     </div>
   </div>
-</div>
-<aside class="ai-side">
-  <div class="ai-side-card">
-    <div class="ai-side-head"><h3>📊 Bản tin vận hành</h3><button class="mini" id="aiOpsRefresh">Phân tích live</button></div>
-    <div class="note" id="aiOpsMeta">Chưa tải bản tin.</div>
-    <div class="ai-brief-grid">
-      <div class="ai-signal"><span>Điều chuyển</span><strong class="purple" id="aiOpsTransfer">—</strong></div>
-      <div class="ai-signal"><span>Cần mua</span><strong class="red" id="aiOpsPurchase">—</strong></div>
-      <div class="ai-signal"><span>Độ phủ thấp</span><strong class="amber" id="aiOpsCoverage">—</strong></div>
-      <div class="ai-signal"><span>Không xuất 90 ngày</span><strong id="aiOpsSlow">—</strong></div>
-    </div>
-    <div class="ai-brief-list" id="aiOpsList"><div class="note">AI sẽ đọc tồn 2 kho và lịch sử 90 ngày khi mở tab này.</div></div>
-    <div class="ai-quick-grid">
-      <button class="mini primary" data-ai-quick="Hôm nay có gì cần ưu tiên trong 2 kho?">Hỏi AI ưu tiên</button>
-      <button class="mini" data-ai-quick="Mã nào nên điều chuyển giữa Kho 58 và Kho 145?">Điều chuyển</button>
-      <button class="mini" data-ai-quick="Hàng nào đang có tồn nhưng 90 ngày không xuất?">Tồn lâu</button>
-      <button class="mini" data-ai-quick="Hàng nào xuất nhiều nhất 30 ngày và độ phủ tồn thấp?">Bán nhanh</button>
-    </div>
-    <div class="ai-brief-note">Các chỉ số tốc độ xuất/độ phủ là tín hiệu quản trị. App không tự mua hàng hoặc tự điều chuyển.</div>
-  </div>
-  <div class="ai-side-card">
-    <div class="ai-side-head"><h3>🕘 Lệnh gần đây</h3><button class="mini" id="aiRecentReload">Tải lại</button></div>
-    <div class="ai-recent-list" id="aiRecentList"><div class="note">Mở tab AI để tải lịch sử lệnh.</div></div>
-    <div class="note" style="margin-top:9px">Bấm một lệnh để đưa vào ô chat và chỉnh lại nếu cần.</div>
-  </div>
-</aside>
-</div></div></section>
+</section>
+
+
 
 
 
@@ -623,24 +677,42 @@ function renderAiRecent(){const box=$("aiRecentList");if(!box)return;box.innerHT
 function useAiRecent(index){const r=aiRecentRows[index];if(!r)return;$("aiCommand").value=r.command||'';$("aiCommand").focus();toast('Đã đưa lệnh gần đây vào ô chat')}
 function openAiAssistant(){showTab("ai")}function closeAiAssistant(){showTab("overview")}
 function loadAiStatus(){$("aiStatusChip").className="module-chip loading";$("aiStatusChip").textContent="AI: kiểm tra...";google.script.run.withSuccessHandler(s=>{const ok=!!s.configured;$("aiStatusChip").className="module-chip "+(ok?"ok":"error");$("aiStatusChip").textContent=ok?"Agent: Sẵn sàng":"AI: Chưa cấu hình";$("aiStatusText").textContent=ok?`Agent V2 · ${s.chatModel||s.model} · reasoning ${s.chatReasoning||s.reasoning||"medium"} · ${s.transactionVersion||"TX Ledger V2"} · Rule Engine ${s.ruleset||"R01-R50"}`:s.message}).withFailureHandler(e=>{$("aiStatusChip").className="module-chip error";$("aiStatusChip").textContent="AI: Lỗi";$("aiStatusText").textContent=errMsg(e)}).getAiAssistantStatus()}
-function resetAiPreview(clearCommand=false){aiPreviewData=null;$("aiExecute").disabled=true;$("aiExecute").style.display='none';$("aiPreview").style.display='none';if(clearCommand)$("aiCommand").value=""}
+function setAiExecutionStatus(state,text){const el=$("aiExecutionStatus");if(!el)return;el.className="execution-status "+String(state||"idle");el.textContent=text||"Chưa có lệnh"}
+function resetAiPreview(clearCommand=false){
+  aiPreviewData=null;
+  $("aiExecute").disabled=true;$("aiExecute").style.display='none';
+  const cancel=$("aiExecutionCancel");if(cancel)cancel.style.display='none';
+  const preview=$("aiPreview");preview.style.display='block';preview.className='ai-preview execution-placeholder';
+  preview.innerHTML='<div class="execution-empty"><div class="execution-empty-inner"><div class="execution-empty-icon">⌁</div><h4>Chưa có Action Plan</h4><p>Hãy giao việc ở cửa sổ Trợ lý AI. Khi AI hiểu được nghiệp vụ, preview sẽ xuất hiện tại đây để kiểm tra trước khi ghi.</p><div class="execution-flow"><span>AI hiểu ý</span><span>Rule Engine</span><span>Fresh-read tồn</span><span>Anh xác nhận</span></div></div></div>';
+  setAiExecutionStatus('idle','Chưa có lệnh');
+  if(clearCommand)$("aiCommand").value="";
+}
+function cancelAiExecution(){if(!aiPreviewData)return toast('Không có lệnh đang chờ');resetAiPreview(false);toast('Đã hủy Action Plan, chưa ghi dữ liệu')}
+function renderAiExecutionSuccess(res){
+  aiPreviewData=null;const b=$("aiExecute");b.disabled=true;b.style.display='none';const cancel=$("aiExecutionCancel");if(cancel)cancel.style.display='none';
+  const vouchers=(res?.vouchers||[]).map(v=>v.voucher||v.transferId||'').filter(Boolean);const preview=$("aiPreview");preview.style.display='block';preview.className='ai-preview execution-success-state';
+  preview.innerHTML=`<div class="execution-success"><div class="execution-success-icon">✓</div><h4>Đã thực hiện & hậu kiểm đạt</h4><p>${fmt(res?.slipCount||0)} phiếu · ${fmt(res?.lineCount||0)} dòng đã ghi sổ an toàn.</p>${vouchers.length?`<div class="execution-success-vouchers">${vouchers.map(esc).join(' · ')}</div>`:''}</div>`;
+  setAiExecutionStatus('success','Đã thực hiện');
+}
 function newAiChat(){aiChatHistory=[];aiAgentState={};saveAiChat();saveAiAgentState();renderAiAgentContext();renderAiChat();resetAiPreview(true);toast('Đã tạo cuộc trò chuyện mới và xóa ngữ cảnh AI')}
 function analyzeAiCommand(){sendAiChat()}
 function sendAiChat(){
   if(aiChatBusy)return;const message=$("aiCommand").value.trim(),actor=$("aiActor").value.trim();if(!message)return;if(actor)localStorage.setItem("qlkho_ai_actor",actor);
   // Gửi draft hiện tại cho AI để hiểu câu sửa như "sao vẫn là 241D"; sau đó hủy ngay preview cũ.
   const currentDraft=aiDraftContextForChat(aiPreviewData);
-  addChat('user',message);$("aiCommand").value='';resetAiPreview(false);aiChatBusy=true;const b=$("aiAnalyze");b.disabled=true;b.textContent='AI đang nghĩ...';
+  addChat('user',message);$("aiCommand").value='';resetAiPreview(false);setAiExecutionStatus('busy','Đang phân tích');aiChatBusy=true;const b=$("aiAnalyze");b.disabled=true;b.textContent='AI đang nghĩ...';
   const box=$("aiMessages");box.insertAdjacentHTML('beforeend','<div class="chat-row assistant" id="aiThinking"><div class="chat-bubble"><div class="chat-thinking"><span>Đang tra cứu và suy luận</span><span class="chat-dot"></span><span class="chat-dot"></span><span class="chat-dot"></span></div></div></div>');box.scrollTop=box.scrollHeight;
   const hist=aiChatHistory.slice(0,-1).slice(-24).map(x=>({role:x.role,content:x.content}));
-  google.script.run.withSuccessHandler(data=>{aiChatBusy=false;b.disabled=false;b.textContent='Gửi';$("aiThinking")?.remove();addChat('assistant',data.reply||'Mình đã xử lý yêu cầu.');aiAgentState=data.agentState||aiAgentState||{};saveAiAgentState();renderAiAgentContext();aiPreviewData=data.preview||null;if(aiPreviewData)renderAiPreview(aiPreviewData);else resetAiPreview(false);aiRecentLoaded=false;loadAiRecent(true)}).withFailureHandler(e=>{aiChatBusy=false;b.disabled=false;b.textContent='Gửi';$("aiThinking")?.remove();resetAiPreview(false);addChat('assistant','Mình gặp lỗi khi xử lý: '+errMsg(e))}).aiChatTurn({message,history:hist,currentDraft,agentState:aiAgentState,actor,defaultWarehouse:$("aiDefaultWarehouse").value})
+  google.script.run.withSuccessHandler(data=>{aiChatBusy=false;b.disabled=false;b.textContent='Gửi';$("aiThinking")?.remove();addChat('assistant',data.reply||'Mình đã xử lý yêu cầu.');aiAgentState=data.agentState||aiAgentState||{};saveAiAgentState();renderAiAgentContext();aiPreviewData=data.preview||null;if(aiPreviewData)renderAiPreview(aiPreviewData);else resetAiPreview(false);aiRecentLoaded=false;loadAiRecent(true)}).withFailureHandler(e=>{aiChatBusy=false;b.disabled=false;b.textContent='Gửi';$("aiThinking")?.remove();resetAiPreview(false);setAiExecutionStatus('blocked','Lỗi phân tích');addChat('assistant','Mình gặp lỗi khi xử lý: '+errMsg(e))}).aiChatTurn({message,history:hist,currentDraft,agentState:aiAgentState,actor,defaultWarehouse:$("aiDefaultWarehouse").value})
 }
 function renderAiPreview(data){
   $("aiPreview").style.display='block';
+  const execCancel=$("aiExecutionCancel");if(execCancel)execCancel.style.display=data?'inline-flex':'none';
+  setAiExecutionStatus(data&&data.ready?'pending':'blocked',data&&data.ready?'Chờ xác nhận':'Bị chặn');
   if(!data||!data.ready){$("aiExecute").disabled=true;$("aiExecute").style.display='none';const un=data?.exceptions||data?.unresolved||[];let html=`<h3>${data?.aiConfirmedNoWrite?'🛡️ Chưa thể ghi kho':'Cần làm rõ trước khi ghi'}</h3>`;if(data?.clarification)html+=`<div class="note">${esc(data.clarification)}</div>`;un.forEach((u,i)=>{const type=String(u.type||'').toUpperCase(),label=type==='NEW_SKU'?'MÃ MỚI':type==='INSUFFICIENT_STOCK'?'THIẾU TỒN':type==='AMBIGUOUS_SKU'?'MÃ MƠ HỒ':type||'CẦN XỬ LÝ';html+=`<div class="ai-candidate"><div class="ai-exception-head"><strong>${u.slipNo?`Phiếu ${esc(u.slipNo)} · `:''}${esc(u.itemText||u.code||'')}</strong><span class="badge warn">${esc(label)}</span></div>${u.message?`<div style="margin-top:5px">${esc(u.message)}</div>`:''}`;const c=u.candidates||[];if(c.length)html+=`<div class="note" style="margin-top:6px">Có thể là: ${c.slice(0,4).map(x=>`${esc(x.code)} · ${esc(x.name)}`).join('<br>')}</div>`;if(data?.blockedId){html+='<div class="ai-exception-actions">';if(u.canCreateNew)html+=canPerm("CREATE_SKU")?`<button class="mini primary" data-ai-create-new="${i}">➕ Tạo mã mới</button>`:`<button class="mini" disabled title="Cần ADMIN">🔒 Tạo mã mới · ADMIN</button>`;if(type==='INSUFFICIENT_STOCK'&&Number(u.available||0)>0)html+=`<button class="mini warn" data-ai-use-available="${i}">Dùng tối đa ${fmt(u.available)}</button>`;if(u.slipNo)html+=`<button class="mini" data-ai-skip-slip="${i}">Bỏ phiếu ${esc(u.slipNo)}</button>`;html+='</div>'}html+='</div>'});$("aiPreview").className='ai-preview warn';$("aiPreview").innerHTML=html;return}
   const slips=Array.isArray(data.slips)?data.slips:[];let html=`<h3>📋 AI đã chuẩn bị ${fmt(data.slipCount||slips.length)} phiếu</h3><div class="ai-batch-summary"><strong>Ngày ${esc(data.transactionDateDisplay||data.transactionDate||'')}</strong> · ${fmt(data.lineCount||0)} dòng · Tổng SL ${fmt(data.totalQty||0)}<br>Backend sẽ đọc tồn live lần cuối khi anh xác nhận.</div>`;slips.forEach((s,idx)=>{const place=s.operation==='TRANSFER'?`Kho ${s.sourceWarehouse} → Kho ${s.destinationWarehouse}`:`Kho ${s.warehouse}`;html+=`<div class="ai-slip"><div class="ai-slip-head"><strong>Phiếu ${esc(s.slipNo||String(idx+1))} · ${esc(s.operationLabel)} · ${esc(place)}</strong><span class="pill">${fmt((s.lines||[]).length)} dòng</span></div>`;(s.lines||[]).forEach(r=>{const move=s.operation==='TRANSFER'?`Nguồn ${fmt(r.before)} → ${fmt(r.after)}<br>Đích ${fmt(r.destinationBefore)} → ${fmt(r.destinationAfter)}`:`${fmt(r.before)} → ${fmt(r.after)}`;html+=`<div class="ai-line"><strong>${esc(r.code)}</strong><div>${esc(r.name)}<div class="note">ĐVT: <strong>${esc(unitOf(r.code,r.name,r.unit))}</strong> · ${s.operation==='ADJUST'?'Đặt tồn mới':'SL: '+fmt(r.qty)}</div></div><div class="move">${move}</div></div>`});html+='</div>'});$("aiPreview").className='ai-preview ready';$("aiPreview").innerHTML=html;$("aiExecute").textContent=`Xác nhận ghi ${fmt(data.slipCount||slips.length)} phiếu`;$("aiExecute").disabled=false;$("aiExecute").style.display='inline-flex'
 }
-function executeAiPreview(){if(!aiPreviewData?.ready||!aiPreviewData.previewId)return toast('Chưa có phiếu sẵn sàng ghi');const ops=(aiPreviewData.slips||[]).map(x=>String(x.operation||'').toUpperCase());if(ops.includes('ADJUST')&&!canPerm('ADJUST'))return toast('Điều chỉnh tồn cần quyền MANAGER trở lên');if(ops.some(x=>x==='IN'||x==='OUT')&&!canPerm('INVENTORY_OUT'))return toast('Vai trò hiện tại không có quyền ghi nhập/xuất');if(ops.includes('TRANSFER')&&!canPerm('TRANSFER'))return toast('Vai trò hiện tại không có quyền điều chuyển');const b=$("aiExecute");b.disabled=true;b.textContent='Đang kiểm tra tồn live & ghi...';google.script.run.withSuccessHandler(res=>{b.style.display='none';const voucherText=(res.vouchers||[]).map(v=>v.voucher||v.transferId||'').filter(Boolean).join(', ');addChat('assistant',`✅ Đã ghi ${res.slipCount||0} phiếu${voucherText?' · '+voucherText:''}, ${res.lineCount||0} dòng. Hậu kiểm tồn và chứng từ đã đạt.`);resetAiPreview(false);refreshAfterDataChange("Giao dịch AI vừa được ghi");aiRecentLoaded=false;loadAiRecent(true)}).withFailureHandler(e=>{b.disabled=false;b.textContent='Xác nhận & ghi kho';addChat('assistant','⚠️ Chưa ghi được kho: '+errMsg(e))}).executeAiInventoryPreview({previewId:aiPreviewData.previewId})}
+function executeAiPreview(){if(!aiPreviewData?.ready||!aiPreviewData.previewId)return toast('Chưa có phiếu sẵn sàng ghi');const ops=(aiPreviewData.slips||[]).map(x=>String(x.operation||'').toUpperCase());if(ops.includes('ADJUST')&&!canPerm('ADJUST'))return toast('Điều chỉnh tồn cần quyền MANAGER trở lên');if(ops.some(x=>x==='IN'||x==='OUT')&&!canPerm('INVENTORY_OUT'))return toast('Vai trò hiện tại không có quyền ghi nhập/xuất');if(ops.includes('TRANSFER')&&!canPerm('TRANSFER'))return toast('Vai trò hiện tại không có quyền điều chuyển');setAiExecutionStatus('busy','Đang ghi sổ');const b=$("aiExecute");b.disabled=true;b.textContent='Đang kiểm tra tồn live & ghi...';google.script.run.withSuccessHandler(res=>{b.style.display='none';const voucherText=(res.vouchers||[]).map(v=>v.voucher||v.transferId||'').filter(Boolean).join(', ');addChat('assistant',`✅ Đã ghi ${res.slipCount||0} phiếu${voucherText?' · '+voucherText:''}, ${res.lineCount||0} dòng. Hậu kiểm tồn và chứng từ đã đạt.`);renderAiExecutionSuccess(res);refreshAfterDataChange("Giao dịch AI vừa được ghi");aiRecentLoaded=false;loadAiRecent(true)}).withFailureHandler(e=>{b.disabled=false;b.textContent='Xác nhận & ghi kho';setAiExecutionStatus('blocked','Ghi sổ thất bại');addChat('assistant','⚠️ Chưa ghi được kho: '+errMsg(e))}).executeAiInventoryPreview({previewId:aiPreviewData.previewId})}
 
 
 function aiCreateNewFromException(index){if(!canPerm("CREATE_SKU"))return toast("Cần quyền ADMIN để tạo mã mới");
@@ -662,7 +734,7 @@ function aiSkipSlipFromException(index){
 function aiConfirmNoWrite(){resetAiPreview(false)}
 
 function exportCsv(){const tab=currentTab();let rows=[];if(tab==="transfer")rows=[["Ngày","Mã điều chuyển","Kho nguồn","Kho đích","Mã","Hàng hóa","ĐVT","SL","Người thực hiện","Trạng thái"],...state.transferHistory.map(x=>[x.date,x.transferId,x.sourceWarehouse,x.destinationWarehouse,x.code,x.name,unitOf(x.code,x.name,x.unit),x.qty,x.person,x.status])];else if(tab==="stock58")rows=[["Mã","Hàng hóa","ĐVT","Tồn","Giá","Giá trị"],...state.stock58.map(x=>[x.code,x.name,unitOf(x.code,x.name,x.unit),x.qty,x.referencePrice||"",x.stockValue||0])];else if(tab==="stock145")rows=[["Dòng","Mã 58","Tên cũ","ĐVT","Tồn","Giá","Giá trị"],...state.stock145.map(x=>[x.sheetRow,x.masterCode,x.legacyName,unitOf(x.masterCode,x.masterName||x.legacyName,x.unit),x.qty,x.referencePrice||"",x.stockValue||0])];else rows=[["Mã","Hàng hóa","ĐVT","Kho 58","Kho 145","Tổng","Tình trạng","Giá trị"],...filteredCombined().map(x=>[x.code,x.name,unitOf(x.code,x.name,x.unit),x.qty58,x.qty145,x.totalQty,x.systemStatus,x.totalValue])];const csv="\ufeff"+rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`QL_KHO_THANH_DUC_${APP_VERSION}_${tab}.csv`;a.click();URL.revokeObjectURL(a.href)}
-function bind(){["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(id=>$(id).addEventListener(id==="search"?"input":"change",renderOverview));$("clearOverview").onclick=()=>{["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(id=>$(id).value="");renderOverview()};["search58","price58"].forEach(id=>$(id).addEventListener(id==="search58"?"input":"change",render58));$("clear58").onclick=()=>{$("search58").value="";$("price58").value="";render58()};["search145","map145","price145"].forEach(id=>$(id).addEventListener(id==="search145"?"input":"change",render145));$("clear145").onclick=()=>{$("search145").value="";$("map145").value="";$("price145").value="";render145()};$("tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;showTab(b.dataset.tab)});document.addEventListener("click",e=>{const ta=e.target.closest("[data-transfer-add]");if(ta){e.stopPropagation();addTransferFromAction(ta.dataset.transferAdd,ta.dataset.transferType,ta.dataset.transferQty);return}const trm=e.target.closest("[data-transfer-remove]");if(trm){transferCart.lines=transferCart.lines.filter(r=>norm(r.code)!==norm(trm.dataset.transferRemove));if(!transferCart.lines.length){transferCart.source="";transferCart.dest=""}renderTransferCart();return}const d=e.target.closest("[data-detail-btn]");if(d){e.stopPropagation();openDetail(d.dataset.detailBtn);return}const p58=e.target.closest("[data-price58]");if(p58){e.stopPropagation();openPrice58(p58.dataset.price58);return}const p145=e.target.closest("[data-price145]");if(p145){e.stopPropagation();openPrice145(p145.dataset.price145,p145.dataset.sourceName);return}const mp=e.target.closest("[data-map-row]");if(mp){e.stopPropagation();openMap(mp.dataset.mapRow,mp.dataset.sourceName,mp.dataset.mapCode);return}if(e.target.closest(".row-menu summary"))return;const tr=e.target.closest("tr[data-detail]");if(tr){openDetail(tr.dataset.detail);return}});$("detailClose").onclick=closeDetail;$("detailBack").addEventListener("click",e=>{if(e.target===$("detailBack"))closeDetail()});$("saveMeta").onclick=saveMeta;$("detailPrice").onclick=()=>detailCode&&openPrice58(detailCode);$("detailTransfer").onclick=()=>{const b=$("detailTransfer");if(b.dataset.transferCode)addTransferFromAction(b.dataset.transferCode,b.dataset.transferType,b.dataset.transferQty)};$("transferClear").onclick=clearTransferCart;$("transferManualAdd").onclick=addManualTransfer;$("transferManualSearch").addEventListener("keydown",e=>{if(e.key==="Enter")addManualTransfer()});$("transferSubmit").onclick=submitTransfer;$("transferHistoryRefresh").onclick=()=>loadTransferHistory(true);let tht;$("transferHistorySearch").addEventListener("input",()=>{clearTimeout(tht);tht=setTimeout(()=>transferLoaded?renderTransferHistory():loadTransferHistory(false),250)});document.addEventListener("input",e=>{const q=e.target.closest("[data-transfer-qty-input]");if(!q)return;const d=String(q.value||"").replace(/[^0-9]/g,"");q.value=d?fmt(Number(d)):"";const line=transferCart.lines.find(r=>norm(r.code)===norm(q.dataset.transferQtyInput));if(line)line.qty=Number(d||0)});$("actionView").addEventListener("change",renderActions);$("actionRefreshView").onclick=renderActions;$("priceCancel").onclick=()=>$("priceBack").classList.remove("open");$("priceSave").onclick=savePrice;$("priceInput").addEventListener("input",e=>{const d=String(e.target.value||"").replace(/[^0-9]/g,"");e.target.value=d?fmt(Number(d)):""});$("mapCancel").onclick=()=>$("mapBack").classList.remove("open");$("mapSave").onclick=saveMap;$("mapInput").addEventListener("input",e=>e.target.value=e.target.value.toUpperCase());const t=todayIso();$("journalFrom").value=t;$("journalTo").value=t;let jt;$("journalSearch").addEventListener("input",()=>{clearTimeout(jt);jt=setTimeout(()=>loadJournal(false),350)});["journalWarehouse","journalType","journalFrom","journalTo"].forEach(id=>$(id).addEventListener("change",()=>loadJournal(false)));$("journalClear").onclick=()=>{const d=todayIso();$("journalSearch").value="";$("journalWarehouse").value="58";$("journalType").value="";$("journalFrom").value=d;$("journalTo").value=d;loadJournal(true)};$("refreshNow").onclick=()=>refreshAll({reason:"Đang cập nhật dữ liệu theo yêu cầu"});$("openSheet58").onclick=()=>state.urls[58]?window.open(state.urls[58],"_blank"):toast("Kho 58 chưa tải");$("openSheet145").onclick=()=>state.urls[145]?window.open(state.urls[145],"_blank"):toast("Kho 145 chưa tải");$("exportCsv").onclick=exportCsv;$("aiAnalyze").onclick=sendAiChat;$("aiExecute").onclick=executeAiPreview;$("aiClear").onclick=newAiChat;$("aiRecentReload").onclick=()=>loadAiRecent(true);$("aiOpsRefresh").onclick=()=>loadAiProactive(true);$("aiCommand").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendAiChat()}});$("aiActor").addEventListener("change",()=>loadSecurity(true));document.querySelectorAll("[data-ai-example]").forEach(b=>b.onclick=()=>{$("aiCommand").value=b.dataset.aiExample;$("aiCommand").focus()});const tools=$("toolsToggle"),menu=$("toolsMenu");if(tools&&menu){tools.onclick=e=>{e.stopPropagation();menu.classList.toggle("open")};document.addEventListener("click",e=>{if(!e.target.closest(".tools-wrap"))menu.classList.remove("open")})}const health=$("healthToggle"),diag=$("statusDiagnostics");if(health&&diag)health.onclick=()=>{diag.classList.toggle("open");$("healthChevron").textContent=diag.classList.contains("open")?"⌃":"⌄"};document.addEventListener("click",e=>{const f=e.target.closest("[data-clear-filter]");if(!f)return;const id=f.dataset.clearFilter;if(id==="all"){["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(k=>$(k).value="")}else if($(id))$(id).value="";renderOverview()});}
+function bind(){["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(id=>$(id).addEventListener(id==="search"?"input":"change",renderOverview));$("clearOverview").onclick=()=>{["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(id=>$(id).value="");renderOverview()};["search58","price58"].forEach(id=>$(id).addEventListener(id==="search58"?"input":"change",render58));$("clear58").onclick=()=>{$("search58").value="";$("price58").value="";render58()};["search145","map145","price145"].forEach(id=>$(id).addEventListener(id==="search145"?"input":"change",render145));$("clear145").onclick=()=>{$("search145").value="";$("map145").value="";$("price145").value="";render145()};$("tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;showTab(b.dataset.tab)});document.addEventListener("click",e=>{const ta=e.target.closest("[data-transfer-add]");if(ta){e.stopPropagation();addTransferFromAction(ta.dataset.transferAdd,ta.dataset.transferType,ta.dataset.transferQty);return}const trm=e.target.closest("[data-transfer-remove]");if(trm){transferCart.lines=transferCart.lines.filter(r=>norm(r.code)!==norm(trm.dataset.transferRemove));if(!transferCart.lines.length){transferCart.source="";transferCart.dest=""}renderTransferCart();return}const d=e.target.closest("[data-detail-btn]");if(d){e.stopPropagation();openDetail(d.dataset.detailBtn);return}const p58=e.target.closest("[data-price58]");if(p58){e.stopPropagation();openPrice58(p58.dataset.price58);return}const p145=e.target.closest("[data-price145]");if(p145){e.stopPropagation();openPrice145(p145.dataset.price145,p145.dataset.sourceName);return}const mp=e.target.closest("[data-map-row]");if(mp){e.stopPropagation();openMap(mp.dataset.mapRow,mp.dataset.sourceName,mp.dataset.mapCode);return}if(e.target.closest(".row-menu summary"))return;const tr=e.target.closest("tr[data-detail]");if(tr){openDetail(tr.dataset.detail);return}});$("detailClose").onclick=closeDetail;$("detailBack").addEventListener("click",e=>{if(e.target===$("detailBack"))closeDetail()});$("saveMeta").onclick=saveMeta;$("detailPrice").onclick=()=>detailCode&&openPrice58(detailCode);$("detailTransfer").onclick=()=>{const b=$("detailTransfer");if(b.dataset.transferCode)addTransferFromAction(b.dataset.transferCode,b.dataset.transferType,b.dataset.transferQty)};$("transferClear").onclick=clearTransferCart;$("transferManualAdd").onclick=addManualTransfer;$("transferManualSearch").addEventListener("keydown",e=>{if(e.key==="Enter")addManualTransfer()});$("transferSubmit").onclick=submitTransfer;$("transferHistoryRefresh").onclick=()=>loadTransferHistory(true);let tht;$("transferHistorySearch").addEventListener("input",()=>{clearTimeout(tht);tht=setTimeout(()=>transferLoaded?renderTransferHistory():loadTransferHistory(false),250)});document.addEventListener("input",e=>{const q=e.target.closest("[data-transfer-qty-input]");if(!q)return;const d=String(q.value||"").replace(/[^0-9]/g,"");q.value=d?fmt(Number(d)):"";const line=transferCart.lines.find(r=>norm(r.code)===norm(q.dataset.transferQtyInput));if(line)line.qty=Number(d||0)});$("actionView").addEventListener("change",renderActions);$("actionRefreshView").onclick=renderActions;$("priceCancel").onclick=()=>$("priceBack").classList.remove("open");$("priceSave").onclick=savePrice;$("priceInput").addEventListener("input",e=>{const d=String(e.target.value||"").replace(/[^0-9]/g,"");e.target.value=d?fmt(Number(d)):""});$("mapCancel").onclick=()=>$("mapBack").classList.remove("open");$("mapSave").onclick=saveMap;$("mapInput").addEventListener("input",e=>e.target.value=e.target.value.toUpperCase());const t=todayIso();$("journalFrom").value=t;$("journalTo").value=t;let jt;$("journalSearch").addEventListener("input",()=>{clearTimeout(jt);jt=setTimeout(()=>loadJournal(false),350)});["journalWarehouse","journalType","journalFrom","journalTo"].forEach(id=>$(id).addEventListener("change",()=>loadJournal(false)));$("journalClear").onclick=()=>{const d=todayIso();$("journalSearch").value="";$("journalWarehouse").value="58";$("journalType").value="";$("journalFrom").value=d;$("journalTo").value=d;loadJournal(true)};$("refreshNow").onclick=()=>refreshAll({reason:"Đang cập nhật dữ liệu theo yêu cầu"});$("openSheet58").onclick=()=>state.urls[58]?window.open(state.urls[58],"_blank"):toast("Kho 58 chưa tải");$("openSheet145").onclick=()=>state.urls[145]?window.open(state.urls[145],"_blank"):toast("Kho 145 chưa tải");$("exportCsv").onclick=exportCsv;$("aiAnalyze").onclick=sendAiChat;$("aiExecute").onclick=executeAiPreview;$("aiExecutionCancel").onclick=cancelAiExecution;$("aiClear").onclick=newAiChat;$("aiRecentReload").onclick=()=>loadAiRecent(true);$("aiOpsRefresh").onclick=()=>loadAiProactive(true);$("aiCommand").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendAiChat()}});$("aiActor").addEventListener("change",()=>loadSecurity(true));document.querySelectorAll("[data-ai-example]").forEach(b=>b.onclick=()=>{$("aiCommand").value=b.dataset.aiExample;$("aiCommand").focus()});const tools=$("toolsToggle"),menu=$("toolsMenu");if(tools&&menu){tools.onclick=e=>{e.stopPropagation();menu.classList.toggle("open")};document.addEventListener("click",e=>{if(!e.target.closest(".tools-wrap"))menu.classList.remove("open")})}const health=$("healthToggle"),diag=$("statusDiagnostics");if(health&&diag)health.onclick=()=>{diag.classList.toggle("open");$("healthChevron").textContent=diag.classList.contains("open")?"⌃":"⌄"};document.addEventListener("click",e=>{const f=e.target.closest("[data-clear-filter]");if(!f)return;const id=f.dataset.clearFilter;if(id==="all"){["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(k=>$(k).value="")}else if($(id))$(id).value="";renderOverview()});}
 document.addEventListener("click",e=>{const quick=e.target.closest("[data-ai-quick]");if(quick){askAiQuick(quick.dataset.aiQuick);return}const recent=e.target.closest("[data-ai-recent-index]");if(recent){useAiRecent(Number(recent.dataset.aiRecentIndex));return}const n=e.target.closest("[data-ai-create-new]");if(n){aiCreateNewFromException(Number(n.dataset.aiCreateNew));return}const u=e.target.closest("[data-ai-use-available]");if(u){aiUseAvailableFromException(Number(u.dataset.aiUseAvailable));return}const s=e.target.closest("[data-ai-skip-slip]");if(s){aiSkipSlipFromException(Number(s.dataset.aiSkipSlip));return}const c=e.target.closest("[data-ai-confirm-no-write]");if(c){aiConfirmNoWrite();return}});
 window.addEventListener("error",e=>setStatus("error","Lỗi giao diện JavaScript",e.message||"Không rõ lỗi"));window.addEventListener("unhandledrejection",e=>setStatus("error","Lỗi giao diện",String(e.reason||"Promise error")));
 
