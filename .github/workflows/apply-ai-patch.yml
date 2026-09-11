@@ -1,0 +1,51 @@
+name: Apply AI patch on dev
+
+on:
+  push:
+    branches:
+      - dev-v10.10.6
+    paths:
+      - ai_patch.diff
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[ai-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v4
+        with:
+          ref: dev-v10.10.6
+          fetch-depth: 0
+
+      - name: Validate and apply patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f ai_patch.diff
+          git apply --check ai_patch.diff
+          git apply ai_patch.diff
+          rm ai_patch.diff
+          node --check code.js
+          python3 - <<'PY'
+          import re, pathlib, subprocess
+          text=pathlib.Path('Index.html').read_text(encoding='utf-8')
+          blocks=re.findall(r'<script[^>]*>([\s\S]*?)</script>', text, re.I)
+          pathlib.Path('/tmp/index_scripts.js').write_text('\n'.join(blocks), encoding='utf-8')
+          subprocess.check_call(['node','--check','/tmp/index_scripts.js'])
+          PY
+          grep -q "const APP_VERSION = 'V10.10.6';" code.js
+          grep -q 'let APP_VERSION="V10.10.6";' Index.html
+
+      - name: Commit applied changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "ChatGPT AI Patch"
+          git config user.email "ai-patch@users.noreply.github.com"
+          git add code.js Index.html ai_patch.diff
+          git commit -m "V10.10.6: Resolver V2 + Confidence Score [ai-applied]"
+          git push origin HEAD:dev-v10.10.6
