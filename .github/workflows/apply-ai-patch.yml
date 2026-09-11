@@ -5,7 +5,7 @@ on:
     branches:
       - dev-v10.10.6
     paths:
-      - ai_transform.py
+      - 'ai_transform*.py'
 
 permissions:
   contents: write
@@ -25,9 +25,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f ai_transform.py
-          python3 ai_transform.py
-          rm ai_transform.py
+          SCRIPT=$(ls ai_transform*.py | tail -n 1)
+          python3 "$SCRIPT"
+          rm -f ai_transform*.py
 
       - name: Syntax checks
         shell: bash
