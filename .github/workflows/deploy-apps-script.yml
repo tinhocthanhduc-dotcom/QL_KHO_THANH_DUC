@@ -1,0 +1,113 @@
+name: Deploy Apps Script production
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev-v10.10.6
+    paths:
+      - deploy_request.txt
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ql-kho-apps-script-production
+  cancel-in-progress: false
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      APPS_SCRIPT_DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
+      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+
+    steps:
+      - name: Checkout tested source
+        uses: actions/checkout@v4
+        with:
+          ref: dev-v10.10.6
+          fetch-depth: 1
+
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CLASPRC_JSON:-}" ]; then
+            echo "Missing repository secret CLASPRC_JSON"
+            exit 21
+          fi
+          if [ -z "${APPS_SCRIPT_DEPLOYMENT_ID:-}" ]; then
+            echo "Missing repository variable APPS_SCRIPT_DEPLOYMENT_ID"
+            exit 22
+          fi
+          test -f .clasp.json
+          test -f appsscript.json
+          test -f code.js
+          test -f Index.html
+
+      - name: Syntax checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check code.js
+          python3 - <<'PY'
+          import re, pathlib, subprocess
+          text = pathlib.Path('Index.html').read_text(encoding='utf-8')
+          blocks = re.findall(r'<script[^>]*>([\s\S]*?)</script>', text, re.I)
+          pathlib.Path('/tmp/index_scripts.js').write_text('\n'.join(blocks), encoding='utf-8')
+          subprocess.check_call(['node', '--check', '/tmp/index_scripts.js'])
+          PY
+
+      - name: Regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp code.js /tmp/regression_test.js
+          cat >> /tmp/regression_test.js <<'JS'
+          const oldSuite = runRegressionTestsV105();
+          const resolverSuite = aiResolverV2SelfTest_();
+          const historicalSuite = aiHistoricalVoucherSelfTestV1107_();
+          if (!oldSuite.pass) process.exit(31);
+          if (!resolverSuite.pass) process.exit(32);
+          if (!historicalSuite.pass) process.exit(33);
+          console.log('Core regression:', oldSuite.passed + '/' + oldSuite.total, 'PASS');
+          console.log('Resolver V2:', resolverSuite.passed + '/' + resolverSuite.total, 'PASS');
+          console.log('Historical Voucher:', historicalSuite.passed + '/' + historicalSuite.total, 'PASS');
+          JS
+          node /tmp/regression_test.js
+
+      - name: Install clasp
+        shell: bash
+        run: npm install -g @google/clasp@latest
+
+      - name: Restore Google authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          clasp show-authorized-user || true
+
+      - name: Push source to Apps Script
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp push --force
+
+      - name: Update existing production deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -oE "const APP_VERSION = '[^']+'" code.js | head -n1 | cut -d"'" -f2)
+          DESC="${VERSION:-QL_KHO} - AI automatic deploy - $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          clasp create-deployment --deploymentId "$APPS_SCRIPT_DEPLOYMENT_ID" --description "$DESC"
+          clasp list-deployments
+          echo "### Apps Script deployment completed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Version: ${VERSION:-unknown}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Deployment ID: ${APPS_SCRIPT_DEPLOYMENT_ID:0:12}…" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove temporary auth file
+        if: always()
+        shell: bash
+        run: rm -f "$HOME/.clasprc.json"
