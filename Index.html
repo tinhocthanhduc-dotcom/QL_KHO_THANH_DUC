@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.10.7</title>
+<title>QL KHO THÀNH ĐỨC · V10.10.8</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -544,7 +544,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.10.7";
+let APP_VERSION="V10.10.8";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
@@ -696,7 +696,19 @@ function renderAiAgentContext(){const c=$('aiContextChip');if(!c)return;const it
 function renderAiChat(){const box=$("aiMessages");if(!box)return;if(!aiChatHistory.length){const s=aiProactiveData?.summary||{};box.innerHTML=`<div class="chat-empty ai-empty-dashboard"><h3>Chào anh 👋</h3><p>Em đã đặt các việc cần chú ý lên trước. Chọn một mục để phân tích ngay hoặc nhập lệnh bên dưới.</p><div class="ai-empty-signals"><button data-ai-quick="Mã nào nên điều chuyển giữa Kho 58 và Kho 145?"><span>⇄ Điều chuyển</span><strong>${aiProactiveLoaded?fmt(s.transferCount||0):"—"}</strong></button><button data-ai-quick="Hàng nào cần nhập mua ưu tiên hôm nay?"><span>🛒 Cần mua</span><strong>${aiProactiveLoaded?fmt(s.purchaseCount||0):"—"}</strong></button><button data-ai-quick="Hàng nào xuất nhiều nhưng độ phủ tồn đang thấp?"><span>⚠ Độ phủ thấp</span><strong>${aiProactiveLoaded?fmt(s.lowCoverageCount||0):"—"}</strong></button><button data-ai-quick="Hàng nào đang có tồn nhưng 90 ngày không xuất?"><span>◷ Tồn lâu</span><strong>${aiProactiveLoaded?fmt(s.noOut90Count||0):"—"}</strong></button></div><button class="ai-priority-cta" data-ai-quick="Hôm nay có gì cần ưu tiên trong 2 kho?">Phân tích ưu tiên hôm nay</button></div>`;return}box.innerHTML=aiChatHistory.map(m=>`<div class="chat-row ${m.role==='user'?'user':'assistant'}"><div><div class="chat-bubble">${esc(m.content||'')}</div><div class="chat-meta">${m.role==='user'?'Anh':'Trợ lý AI'}${m.time?' · '+esc(m.time):''}</div></div></div>`).join('');box.scrollTop=box.scrollHeight}
 function chatNow(){return new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}
 function addChat(role,content){aiChatHistory.push({role,content:String(content||''),time:chatNow()});aiChatHistory=aiChatHistory.slice(-30);saveAiChat();renderAiChat()}
-function aiDraftContextForChat(data){if(!data)return null;try{return {ready:!!data.ready,transactionDate:data.transactionDate||'',slips:(data.slips||[]).slice(0,8).map(s=>({slipNo:s.slipNo||'',operation:s.operation||'',warehouse:s.warehouse||'',sourceWarehouse:s.sourceWarehouse||'',destinationWarehouse:s.destinationWarehouse||'',lines:(s.lines||[]).slice(0,20).map(r=>({code:r.code||'',name:r.name||r.itemText||'',unit:r.unit||'',qty:Number(r.qty||r.quantity||0)}))}))}}catch(e){return null}}
+function aiDraftContextForChat(data){
+  if(!data)return null;
+  try{
+    return {
+      ready:!!data.ready,
+      transactionDate:data.transactionDate||'',
+      actionPlan:data.actionPlan||null,
+      sourceMessage:data.sourceMessage||data.command||'',
+      exceptions:(data.exceptions||data.unresolved||[]).slice(0,8).map(x=>({type:x.type||'',code:x.code||'',itemText:x.itemText||'',message:x.message||'',candidates:(x.candidates||[]).slice(0,5)})),
+      slips:(data.slips||[]).slice(0,8).map(s=>({slipNo:s.slipNo||'',operation:s.operation||'',warehouse:s.warehouse||'',sourceWarehouse:s.sourceWarehouse||'',destinationWarehouse:s.destinationWarehouse||'',actor:s.actor||'',counterparty:s.counterparty||'',note:s.note||'',lines:(s.lines||[]).slice(0,20).map(r=>({code:r.code||'',name:r.name||r.itemText||'',unit:r.unit||'',qty:Number(r.qty||r.quantity||0)}))}))
+    };
+  }catch(e){return null}
+}
 function loadAiRecent(force=false){const box=$("aiRecentList");if(!box)return;if(aiRecentLoaded&&!force){renderAiRecent();return}box.innerHTML='<div class="note">Đang tải lệnh gần đây...</div>';google.script.run.withSuccessHandler(data=>{aiRecentRows=data.rows||[];aiRecentLoaded=true;renderAiRecent()}).withFailureHandler(e=>{box.innerHTML=`<div class="note">Không tải được: ${esc(errMsg(e))}</div>`}).getAiRecentCommands({limit:8})}
 function renderAiRecent(){const box=$("aiRecentList");if(!box)return;box.innerHTML=aiRecentRows.map((r,i)=>{const st=String(r.status||'').toUpperCase(),cls=st==='EXECUTED'?'executed':st.includes('BLOCKED')||st.includes('NO_WRITE')?'blocked':st==='PREVIEW'?'preview':'';return `<div class="ai-recent-item" data-ai-recent-index="${i}"><div class="ai-recent-command">${esc(r.commandShort||r.command||'—')}</div><div class="ai-recent-meta"><span>${esc(r.time||'')}</span><span class="ai-recent-status ${cls}">${esc(r.statusLabel||r.status||'')}</span>${r.operation?`<span>${esc(r.operation)}</span>`:''}</div></div>`}).join('')||'<div class="note">Chưa có lệnh AI nào.</div>'}
 function useAiRecent(index){const r=aiRecentRows[index];if(!r)return;$("aiCommand").value=r.command||'';$("aiCommand").focus();toast('Đã đưa lệnh gần đây vào ô chat')}

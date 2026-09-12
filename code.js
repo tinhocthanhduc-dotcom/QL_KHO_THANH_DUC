@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.10.7';
+const APP_VERSION = 'V10.10.8';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -174,9 +174,9 @@ const AI_CHAT_CONFIG = Object.freeze({
 });
 
 const AI_AGENT_CONFIG = Object.freeze({
-  VERSION: 'AGENT_V3.2_HISTORICAL_VOUCHER_2026-09-11',
-  STATE_VERSION: 'CTX_V1',
-  MAX_TOOL_ROUNDS: 3,
+  VERSION: 'AGENT_V3.3_COMMAND_RESOLVER_2026-09-12',
+  STATE_VERSION: 'CTX_V2',
+  MAX_TOOL_ROUNDS: 4,
   MAX_TOOL_RESULTS: 24,
   MAX_STATE_ITEMS: 4,
   MAX_MOVEMENT_ROWS: 80,
@@ -186,12 +186,15 @@ const AI_AGENT_CONFIG = Object.freeze({
 });
 
 
-// V10.10.6 · Resolver V2: confidence chuẩn hóa + chặn đoán variant/tình trạng.
+// V10.10.8 · Command Resolver V3: ưu tiên hoàn thành phiếu, chỉ hỏi khi thực sự còn cạnh tranh gần nhau.
 const AI_RESOLVER_CONFIG = Object.freeze({
-  VERSION: 'RESOLVER_V2_2026-09-11',
-  AUTO_RESOLVE_MIN_CONFIDENCE: 88,
+  VERSION: 'COMMAND_RESOLVER_V3_2026-09-12',
+  AUTO_RESOLVE_MIN_CONFIDENCE: 82,
+  EXPLICIT_VARIANT_MIN_CONFIDENCE: 78,
   EXACT_MODEL_CONFIDENCE: 96,
-  HIGH_CONFIDENCE_FLOOR: 88,
+  HIGH_CONFIDENCE_FLOOR: 84,
+  DECISIVE_MARGIN: 45,
+  NEAR_TIE_MARGIN: 28,
   MAX_CANDIDATES: 8
 });
 
@@ -2651,13 +2654,23 @@ function coreResolveSkuIdentityV105_(itemText, catalog) {
     return aiResolverEnrichResultV2_({resolved:true,item:top.item,score:top.score,candidates:candidates,reason:'EXACT_MODEL',ruleId:'R11'},confidence,margin);
   }
 
-  if (top.score<260) return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'LOW_CONFIDENCE',ruleId:'R46'},confidence,margin);
-  if (second && second.score>=170 && margin<70) return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'AMBIGUOUS',ruleId:'R46'},Math.min(confidence,79),margin);
-  if (confidence < AI_RESOLVER_CONFIG.AUTO_RESOLVE_MIN_CONFIDENCE) {
-    return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'LOW_CONFIDENCE_V2',ruleId:'R46'},confidence,margin);
+  // V3: nếu chỉ còn một ứng viên tương thích rõ ràng thì ưu tiên hoàn thành phiếu.
+  // Chỉ hỏi lại khi top-2 thực sự gần nhau; variant rõ (WB/ES/CH/INKVIET/...) được xem là tín hiệu mạnh.
+  if (top.score<240) return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'LOW_CONFIDENCE',ruleId:'R46'},confidence,margin);
+  const explicitVariants = aiVariantTokens_(raw);
+  const hasExplicitVariant = explicitVariants.length > 0;
+  const decisive = !second || second.score < 140 || margin >= AI_RESOLVER_CONFIG.DECISIVE_MARGIN;
+  const nearTie = second && second.score >= 170 && margin < AI_RESOLVER_CONFIG.NEAR_TIE_MARGIN;
+  if (nearTie) return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'AMBIGUOUS_NEAR_TIE_V3',ruleId:'R46'},Math.min(confidence,79),margin);
+  const minConfidence = hasExplicitVariant ? AI_RESOLVER_CONFIG.EXPLICIT_VARIANT_MIN_CONFIDENCE : AI_RESOLVER_CONFIG.AUTO_RESOLVE_MIN_CONFIDENCE;
+  if (confidence < minConfidence && !decisive) {
+    return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'LOW_CONFIDENCE_V3',ruleId:'R46'},confidence,margin);
   }
-  confidence = Math.max(confidence, AI_RESOLVER_CONFIG.HIGH_CONFIDENCE_FLOOR);
-  return aiResolverEnrichResultV2_({resolved:true,item:top.item,score:top.score,candidates:candidates,reason:'HIGH_CONFIDENCE',ruleId:'R11'},confidence,margin);
+  if (confidence < minConfidence && decisive && top.score < 280) {
+    return aiResolverEnrichResultV2_({resolved:false,candidates:candidates,reason:'LOW_CONFIDENCE_V3',ruleId:'R46'},confidence,margin);
+  }
+  confidence = Math.max(confidence, hasExplicitVariant ? AI_RESOLVER_CONFIG.EXPLICIT_VARIANT_MIN_CONFIDENCE : AI_RESOLVER_CONFIG.HIGH_CONFIDENCE_FLOOR);
+  return aiResolverEnrichResultV2_({resolved:true,item:top.item,score:top.score,candidates:candidates,reason:decisive?'DECISIVE_MATCH_V3':'HIGH_CONFIDENCE_V3',ruleId:'R11'},confidence,margin);
 }
 
 function coreBusinessReasonV105_(operation, counterparty, note) {
@@ -3883,6 +3896,8 @@ function aiBlockedResponse_(ctx) {
     ready:false,writeBlocked:true,aiConfirmedNoWrite:true,blockedId:blockedId,
     transactionDate:cachePayload.transactionDate,transactionDateDisplay:aiDisplayDateKey_(cachePayload.transactionDate),
     clarification:'AI xác nhận CHƯA GHI SỔ. Không có thay đổi nào được ghi vào tồn kho hoặc nhật ký cho đến khi anh xử lý ngoại lệ và xác nhận lại.',
+    actionPlan:cachePayload.plan || null,
+    sourceMessage:cachePayload.sourceMessage || cachePayload.command,
     exceptions:exceptions,unresolved:exceptions,createdAt:Utilities.formatDate(new Date(), DASHBOARD_CONFIG.TIME_ZONE, 'dd/MM/yyyy HH:mm:ss')
   };
 }
@@ -5163,6 +5178,10 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
     'Hôm nay theo giờ Việt Nam là '+today+'. Model đang dùng: '+model+' với reasoning medium.',
     'AI BRAIN chỉ hiểu ý, chọn công cụ và tạo Action Plan. Backend deterministic là nguồn sự thật duy nhất cho SKU, tồn, chứng từ và quyền ghi.',
     'Ưu tiên hiểu ngữ cảnh hội thoại. Không hỏi lại kho/người thực hiện nếu app đã cung cấp. Chỉ hỏi khi thiếu dữ liệu quan trọng hoặc có nhiều SKU thật sự khả dĩ.',
+    'COMMAND RESOLVER V3: Với lệnh nhập/xuất, mục tiêu là tạo preview càng sớm càng tốt. Nếu SEARCH_CATALOG/tool live chỉ còn 1 SKU tương thích rõ ràng thì phải dùng SKU đó, KHÔNG hỏi người dùng đọc lại mã TD.',
+    'Nếu có draft cũ/actionPlan đang chờ và tin nhắn mới chỉ bổ sung mã, variant, số lượng, người thực hiện hoặc đối tượng, hãy GIỮ NGUYÊN mọi trường đã biết và chỉ vá trường vừa bổ sung. Không dựng lại phiếu từ đầu.',
+    'Một dữ liệu đã biết từ draft/history/tool không được hỏi lại. Chỉ hỏi tối đa một câu khi còn từ 2 SKU cạnh tranh gần nhau hoặc thiếu trường bắt buộc mà backend không thể suy ra.',
+    'Nếu cần hỏi SKU, phải đưa tối đa 3 lựa chọn cụ thể dạng TD-xxxx · tên hàng; không hỏi chung chung “mã nào?”. Khi người dùng chọn một mã, lượt kế tiếp phải chuẩn bị Action Plan ngay nếu các trường khác đã đủ.',
     'TIN NHẮN MỚI NHẤT có ưu tiên cao nhất. Draft cũ và agentState chỉ dùng làm ngữ cảnh; nếu người dùng sửa model/hãng thì phải bỏ identity cũ.',
     'AgentState có thể chứa mặt hàng vừa nói. Khi người dùng nói “cái đó”, “mã đó”, “xuất tiếp”, “nhập tiếp”, “phần còn lại”, hãy dùng đúng mặt hàng trong AgentState nếu chỉ có một lựa chọn rõ. Không bịa tham chiếu khi state có nhiều item.',
     'Khi hỏi tồn, số liệu, lịch sử, phiếu, báo cáo hoặc “còn lại/xuất hết”, PHẢI dùng tool live phù hợp; không trả số từ trí nhớ hội thoại.',
@@ -6190,3 +6209,24 @@ function runRegressionTestsV108() {
 
 
 // ===== END 99_Tests.gs =====
+
+
+function aiCommandResolverV3SelfTest_(){
+  const tests=[];
+  function add(name,pass,detail){tests.push({name:name,pass:Boolean(pass),detail:detail||null});}
+  const catalog=[
+    {code:'TD-2001',name:'Hộp mực 12A Whitebox',aliases:'12A WB; 12A whitebox',legacyNames:[],searchText:normalize_('TD-2001 Hộp mực 12A Whitebox 12A WB 12A whitebox')},
+    {code:'TD-2002',name:'Hộp mực 12A TOPZON',aliases:'12A TOPZON',legacyNames:[],searchText:normalize_('TD-2002 Hộp mực 12A TOPZON')},
+    {code:'TD-2003',name:'Hộp mực 12A INKVIET',aliases:'12A INKVIET',legacyNames:[],searchText:normalize_('TD-2003 Hộp mực 12A INKVIET')}
+  ];
+  let r=coreResolveSkuIdentityV105_('12A WB',catalog);
+  add('Variant rõ tự resolve, không hỏi mã',r.resolved&&r.item.code==='TD-2001',r);
+  r=coreResolveSkuIdentityV105_('12A whitebox',catalog);
+  add('Alias exact vẫn resolve',r.resolved&&r.item.code==='TD-2001',r);
+  r=coreResolveSkuIdentityV105_('12A',catalog);
+  add('Model trần vẫn chặn đoán variant',!r.resolved,r);
+  const draftPlan={transaction_date:'2026-09-12',slips:[{slip_no:'1',operation:'OUT',warehouse:'58',source_warehouse:'',destination_warehouse:'',actor_hint:'Thanh',counterparty:'',note:'',clarification:'',lines:[{item_text:'12A',source_excerpt:'12A',requested_code:'',quantity:5,target_quantity:-1,force_new_sku:false}]}]};
+  const blockedClientShape={actionPlan:draftPlan,sourceMessage:'xuất 5 hộp 12A',exceptions:[{type:'AMBIGUOUS_SKU',itemText:'12A'}]};
+  add('Blocked response contract giữ Action Plan cho lượt sau',!!blockedClientShape.actionPlan&&blockedClientShape.actionPlan.slips[0].lines[0].quantity===5,blockedClientShape);
+  return {appVersion:APP_VERSION,resolverVersion:AI_RESOLVER_CONFIG.VERSION,total:tests.length,passed:tests.filter(x=>x.pass).length,failed:tests.filter(x=>!x.pass).length,pass:tests.every(x=>x.pass),results:tests};
+}
