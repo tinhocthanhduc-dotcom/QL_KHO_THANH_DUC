@@ -68,12 +68,18 @@ jobs:
           const oldSuite = runRegressionTestsV105();
           const resolverSuite = aiResolverV2SelfTest_();
           const historicalSuite = aiHistoricalVoucherSelfTestV1107_();
+          const commandResolverV3 = aiCommandResolverV3SelfTest_();
+          const learningSuite = aiLearningMemorySelfTestV10109_();
           if (!oldSuite.pass) process.exit(31);
           if (!resolverSuite.pass) process.exit(32);
           if (!historicalSuite.pass) process.exit(33);
+          if (!commandResolverV3.pass) process.exit(34);
+          if (!learningSuite.pass) process.exit(35);
           console.log('Core regression:', oldSuite.passed + '/' + oldSuite.total, 'PASS');
           console.log('Resolver V2:', resolverSuite.passed + '/' + resolverSuite.total, 'PASS');
           console.log('Historical Voucher:', historicalSuite.passed + '/' + historicalSuite.total, 'PASS');
+          console.log('Command Resolver V3:', commandResolverV3.passed + '/' + commandResolverV3.total, 'PASS');
+          console.log('Learning Memory:', learningSuite.passed + '/' + learningSuite.total, 'PASS');
           JS
           node /tmp/regression_test.js
 
