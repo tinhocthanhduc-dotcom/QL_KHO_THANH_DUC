@@ -5188,6 +5188,9 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
     'SEARCH_CATALOG để tìm SKU; GET_STOCK để đọc tồn live 2 kho; GET_ITEM_HISTORY để xem lịch sử một mã; GET_VOUCHER để đọc chính xác toàn bộ dòng của một số phiếu; GET_MOVEMENTS cho hôm qua/ngày/range; GET_RECENT_VOUCHERS để liệt kê phiếu; GET_OPERATIONAL_REPORT cho báo cáo tài chính/tồn; GET_PROACTIVE_REPORT cho câu hỏi quản trị như ưu tiên hôm nay, cần mua gì, nên điều chuyển gì, hàng nào xuất nhanh/chậm hoặc bất thường.',
     'Có thể dùng nhiều vòng tool. Nếu kết quả vòng đầu cho mã TD, vòng sau được phép GET_STOCK hoặc GET_ITEM_HISTORY bằng mã đó. Không lặp lại cùng một tool request.',
     'Nếu người dùng yêu cầu sửa/hủy/xóa/điều chỉnh phiếu cũ, bắt buộc gọi GET_VOUCHER đúng số phiếu trước khi lập Action Plan; không suy đoán nội dung phiếu từ hội thoại.',
+    'Nếu người dùng đang tra phiếu và chỉ trả lời một số ngắn như 6, 06, 006 hoặc “phiếu 6”, coi đó là hậu tố số phiếu và tiếp tục GET_VOUCHER; không bắt người dùng gõ lại toàn bộ PXK/PNK.',
+    'Khi GET_VOUCHER trả resolvedFromShortRef=true, phải dùng đúng voucher backend đã resolve. Khi ambiguous=true, chỉ hỏi người dùng chọn trong candidates backend trả về.',
+
     'Không hard-delete và không sửa trực tiếp dòng lịch sử đã ghi. "xóa phiếu" = VOID/HỦY bằng bút toán đảo; "sửa phiếu" = đảo phần sai rồi lập giao dịch đúng. note phải chứa số phiếu gốc dạng [VOID SOPHIEU] hoặc [CORRECT SOPHIEU].',
     'Bút toán sửa/hủy phiếu cũ mặc định ghi ngày hiện tại để bảo toàn chuỗi tồn và audit. Riêng giao dịch bị thiếu nhưng chưa từng ghi có thể dùng transaction_date ngày cũ đúng theo yêu cầu người dùng.',
     'Khi người dùng hỏi “hôm nay nên làm gì”, “có gì bất thường”, “cần mua gì”, “nên điều chuyển gì”, “hàng nào bán nhanh/chậm”, “tồn lâu” hoặc câu tương đương, phải dùng GET_PROACTIVE_REPORT. Phân biệt rõ dữ liệu thực tế và heuristic: độ phủ ngày/tồn chậm chỉ là tín hiệu quản trị, không phải lệnh mua tự động.',
@@ -5225,15 +5228,70 @@ function aiExtractVoucherNoV1107_(text) {
   return m ? m[0] : '';
 }
 
+function aiExtractVoucherRefV10108_(text) {
+  const raw=String(text||'').trim();
+  const full=aiExtractVoucherNoV1107_(raw);
+  if(full) return {kind:'FULL',value:full,suffix:'',type:''};
+  const up=raw.toUpperCase();
+  const typeMatch=up.match(/\b(PXK|PNK|KK|DCK)\b/);
+  const type=typeMatch?typeMatch[1]:'';
+  let m=up.match(/(?:PHIẾU|PHIEU|SỐ|SO|MÃ|MA)?\s*0*(\d{1,4})\s*$/i);
+  if(!m) m=up.match(/^0*(\d{1,4})$/);
+  if(!m) return {kind:'TEXT',value:up,suffix:'',type:type};
+  return {kind:'SUFFIX',value:String(parseInt(m[1],10)||0).padStart(3,'0'),suffix:String(parseInt(m[1],10)||0).padStart(3,'0'),type:type};
+}
+
+function aiVoucherSuffixMatchV10108_(voucher,suffix,type) {
+  voucher=String(voucher||'').trim().toUpperCase();
+  suffix=String(suffix||'').trim().toUpperCase();
+  type=String(type||'').trim().toUpperCase();
+  if(!voucher||!suffix) return false;
+  if(type && voucher.indexOf(type+'-')!==0) return false;
+  const m=voucher.match(/^(PXK|PNK|KK|DCK)-\d{8}-([A-Z0-9]+)$/);
+  if(!m) return false;
+  const tail=m[2];
+  if(/^\d+$/.test(tail) && /^\d+$/.test(suffix)) return parseInt(tail,10)===parseInt(suffix,10);
+  return tail===suffix;
+}
+
 function aiHistoricalVoucherRequestV1107_(text) {
   const n=normalize_(text);
   return /(sua|chinh sua|huy|xoa|void|dieu chinh).*(phieu|pxk|pnk|dck|kk)|(?:pxk|pnk|dck|kk).*?(sua|huy|xoa|void|dieu chinh)/.test(n);
 }
 
 function aiChatGetVoucherV1107_(voucherText, warehouse) {
-  const voucher=aiExtractVoucherNoV1107_(voucherText) || String(voucherText||'').trim().toUpperCase();
-  if(!voucher) return {found:false,reason:'MISSING_VOUCHER',message:'Thiếu số phiếu cần tra.'};
+  const ref=aiExtractVoucherRefV10108_(voucherText);
   warehouse=['58','145','all'].indexOf(String(warehouse))>=0?String(warehouse):'all';
+  if(!ref.value) return {found:false,reason:'MISSING_VOUCHER',message:'Thiếu số phiếu cần tra.'};
+
+  if(ref.kind==='FULL') {
+    const voucher=ref.value;
+    const data=getJournalHistory({warehouse:warehouse,query:voucher,allDates:true,limit:HISTORICAL_VOUCHER_CONFIG.MAX_VOUCHER_ROWS});
+    const rows=(data.rows||[]).filter(function(r){return String(r.voucher||'').trim().toUpperCase()===voucher;});
+    if(!rows.length) return {found:false,voucher:voucher,warehouse:warehouse,reason:'VOUCHER_NOT_FOUND',message:'Không tìm thấy đúng số phiếu '+voucher+'.'};
+    return {found:true,voucher:voucher,warehouse:warehouse,totalLines:rows.length,originalImmutable:true,correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,rows:rows.map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,type:r.type,input:r.input,output:r.output,before:r.before,after:r.after,person:r.person,reason:r.reason,note:r.note};})};
+  }
+
+  if(ref.kind==='SUFFIX') {
+    const today=Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'yyyyMMdd');
+    const data=getJournalHistory({warehouse:warehouse,query:ref.suffix,allDates:true,limit:HISTORICAL_VOUCHER_CONFIG.MAX_VOUCHER_ROWS});
+    const matched=(data.rows||[]).filter(function(r){return aiVoucherSuffixMatchV10108_(r.voucher,ref.suffix,ref.type);});
+    const byVoucher={};
+    matched.forEach(function(r){const v=String(r.voucher||'').trim().toUpperCase();if(!byVoucher[v])byVoucher[v]=[];byVoucher[v].push(r);});
+    const vouchers=Object.keys(byVoucher);
+    const todayVouchers=vouchers.filter(function(v){return v.indexOf('-'+today+'-')>0;});
+    const pool=todayVouchers.length?todayVouchers:vouchers;
+    if(pool.length===1){
+      const voucher=pool[0],rows=byVoucher[voucher];
+      return {found:true,resolvedFromShortRef:true,requestedRef:String(voucherText||''),voucher:voucher,warehouse:warehouse,totalLines:rows.length,originalImmutable:true,correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,rows:rows.map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,type:r.type,input:r.input,output:r.output,before:r.before,after:r.after,person:r.person,reason:r.reason,note:r.note};})};
+    }
+    if(pool.length>1){
+      return {found:false,ambiguous:true,reason:'AMBIGUOUS_VOUCHER_SUFFIX',requestedRef:String(voucherText||''),suffix:ref.suffix,candidates:pool.slice(0,8),message:'Có '+pool.length+' phiếu khớp đuôi '+ref.suffix+'. Hãy chọn đúng số phiếu: '+pool.slice(0,5).join(', ')+'.'};
+    }
+    return {found:false,reason:'VOUCHER_SUFFIX_NOT_FOUND',requestedRef:String(voucherText||''),suffix:ref.suffix,message:'Không tìm thấy phiếu có đuôi '+ref.suffix+' trong dữ liệu hiện có.'};
+  }
+
+  const voucher=String(ref.value||'').trim().toUpperCase();
   const data=getJournalHistory({warehouse:warehouse,query:voucher,allDates:true,limit:HISTORICAL_VOUCHER_CONFIG.MAX_VOUCHER_ROWS});
   const rows=(data.rows||[]).filter(function(r){return String(r.voucher||'').trim().toUpperCase()===voucher;});
   if(!rows.length) return {found:false,voucher:voucher,warehouse:warehouse,reason:'VOUCHER_NOT_FOUND',message:'Không tìm thấy đúng số phiếu '+voucher+'.'};
@@ -5243,6 +5301,9 @@ function aiChatGetVoucherV1107_(voucherText, warehouse) {
 function aiHistoricalVoucherSelfTestV1107_() {
   const t=[];function add(name,pass){t.push({name:name,pass:Boolean(pass)});}
   add('extract PXK',aiExtractVoucherNoV1107_('Hủy PXK-20260905-003')==='PXK-20260905-003');
+  add('short ref 006',aiExtractVoucherRefV10108_('006').suffix==='006');
+  add('short ref phiếu 6',aiExtractVoucherRefV10108_('phiếu 6').suffix==='006');
+  add('suffix match numeric',aiVoucherSuffixMatchV10108_('PXK-20260912-006','006','')===true);
   add('extract PNK',aiExtractVoucherNoV1107_('sửa pnk-20260903-12')==='PNK-20260903-12');
   add('detect sửa',aiHistoricalVoucherRequestV1107_('Sửa phiếu PXK-20260905-003'));
   add('detect hủy',aiHistoricalVoucherRequestV1107_('Hủy PXK-20260905-003'));
