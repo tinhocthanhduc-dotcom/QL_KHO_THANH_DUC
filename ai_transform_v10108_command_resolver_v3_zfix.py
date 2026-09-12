@@ -1,8 +1,12 @@
 from pathlib import Path
-import runpy, re
+import runpy, re, subprocess
 
 # Apply the full V10.10.8 transform first.
 runpy.run_path('ai_transform_v10108_command_resolver_v3.py', run_name='__main__')
+
+# GitHub Actions token cannot update another workflow file. Keep workflow YAML unchanged
+# in this runtime commit; workflow maintenance is done separately through the connector.
+subprocess.check_call(['git','checkout','--','.github/workflows/deploy-apps-script.yml'])
 
 p = Path('code.js')
 text = p.read_text(encoding='utf-8')
