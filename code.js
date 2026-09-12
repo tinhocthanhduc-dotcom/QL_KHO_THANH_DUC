@@ -175,7 +175,7 @@ const AI_CHAT_CONFIG = Object.freeze({
 
 const AI_AGENT_CONFIG = Object.freeze({
   VERSION: 'AGENT_V3.3_COMMAND_RESOLVER_2026-09-12',
-  STATE_VERSION: 'CTX_V2',
+  STATE_VERSION: 'CTX_V3_VOUCHER',
   MAX_TOOL_ROUNDS: 4,
   MAX_TOOL_RESULTS: 24,
   MAX_STATE_ITEMS: 4,
@@ -3673,13 +3673,23 @@ function aiApplyDeterministicPlanGuards_(message, plan) {
   return plan;
 }
 
-function aiCheckActionPlanConsistency_(message, plan, currentDraft) {
+function aiCheckActionPlanConsistency_(message, plan, currentDraft, agentState) {
   plan = aiNormalizeActionPlan_(plan);
   const allLines = [];
   plan.slips.forEach(function(s,si){(s.lines||[]).forEach(function(l,li){allLines.push({line:l,slipIndex:si,lineIndex:li});});});
   if (!allLines.length) return {ok:false,reason:'AI chưa tạo action_plan có dòng hàng.',searchQuery:''};
 
-  const contextText = [String(message||''), JSON.stringify(currentDraft || {})].join(' ');
+  const voucherStateV2=aiNormalizeAgentStateV106_(agentState);
+  const patchTextV2=normalize_(message);
+  const fieldOnlyVoucherPatchV2=Boolean(voucherStateV2.voucherContext&&voucherStateV2.lastVoucher&&aiVoucherContextNeedsRefreshV2_(message,voucherStateV2)&&!/(ma hang|sku|model|san pham|mat hang|hang hoa|doi ma|thay ma)/.test(patchTextV2));
+  if(fieldOnlyVoucherPatchV2){
+    const allowedCodesV2={},allowedNamesV2={};
+    (voucherStateV2.voucherContext.rows||[]).forEach(function(r){if(r&&r.code)allowedCodesV2[normalize_(r.code)]=true;if(r&&r.name)allowedNamesV2[normalize_(r.name)]=true;});
+    const sameIdentityV2=allLines.every(function(x){const l=x.line||{};const c=normalize_(l.requested_code||'');const n=normalize_(l.item_text||'');return (c&&allowedCodesV2[c])||(!c&&n&&allowedNamesV2[n]);});
+    if(sameIdentityV2)return {ok:true,reason:'VERIFIED_VOUCHER_FIELD_PATCH',searchQuery:''};
+  }
+
+  const contextText = [String(message||''), JSON.stringify(currentDraft || {}), JSON.stringify((aiNormalizeAgentStateV106_(agentState).voucherContext)||{})].join(' ');
   const contextModels = aiStrongModelTokens_(contextText);
   const latestModels = aiStrongModelTokens_(message);
   const latestBrand = aiLastBrand_(message);
@@ -4924,7 +4934,21 @@ function aiRunAgentReasoningLoop_(req) {
   return state;
 }
 
+function aiVoucherContextNeedsRefreshV2_(message, agentState){
+  const s=aiNormalizeAgentStateV106_(agentState),n=normalize_(message);
+  if(!s.lastVoucher)return false;
+  return /(^|\b)(sua|chinh sua|dieu chinh|doi|thay|huy|xoa|void|tang|giam)(\b|$)/.test(n);
+}
+
 function aiApplyLiveToolFailsafes_(req,state) {
+  if(aiVoucherContextNeedsRefreshV2_(req.message,req.agentState)&&!aiToolContextHasV106_(state.toolContext,'GET_VOUCHER')){
+    const s=aiNormalizeAgentStateV106_(req.agentState);
+    const vr={type:'GET_VOUCHER',query:s.lastVoucher,code:'',warehouse:'all',from_date:'',to_date:'',limit:HISTORICAL_VOUCHER_CONFIG.MAX_VOUCHER_ROWS};
+    aiRunChatTools_([vr],req.defaultWarehouse).forEach(function(x){if(state.toolContext.length<AI_AGENT_CONFIG.MAX_TOOL_RESULTS)state.toolContext.push(x);});
+    state.usedTools.push('GET_VOUCHER');
+    state.decision=aiChatReason_(req.message,req.history,req.actor,req.defaultWarehouse,state.toolContext,true,req.currentDraft,req.agentState,{round:'voucher-refresh',maxRounds:AI_AGENT_CONFIG.MAX_TOOL_ROUNDS});
+    state.calls++;
+  }
   if(aiMessageNeedsLiveStockV106_(req.message,state.decision)&&!aiToolContextHasV106_(state.toolContext,'GET_STOCK')){
     const autoReq=aiAutoStockRequestV106_(req.message,req.agentState,state.decision);
     if(autoReq){
@@ -4946,7 +4970,7 @@ function aiPrepareActionPlanTurn_(req,state) {
   let plan=aiNormalizeActionPlan_(state.decision.action_plan);
   plan=aiApplyDeterministicPlanGuards_(req.message,plan);
   plan=aiApplyConversationReferencesV106_(req.message,plan,req.agentState,req.currentDraft);
-  let consistency=state.decision.should_prepare?aiCheckActionPlanConsistency_(req.message,plan,req.currentDraft):{ok:true,reason:'',searchQuery:''};
+  let consistency=state.decision.should_prepare?aiCheckActionPlanConsistency_(req.message,plan,req.currentDraft,req.agentState):{ok:true,reason:'',searchQuery:''};
   if(!consistency.ok&&state.decision.should_prepare){
     const guardContext=state.toolContext.slice(-AI_AGENT_CONFIG.MAX_TOOL_RESULTS);
     if(consistency.searchQuery){try{guardContext.push({request:{type:'SEARCH_CATALOG',query:consistency.searchQuery,code:'',warehouse:'',from_date:'',to_date:'',limit:8},result:aiChatSearchCatalog_(consistency.searchQuery)});}catch(e){}}
@@ -4954,7 +4978,7 @@ function aiPrepareActionPlanTurn_(req,state) {
     state.decision=aiChatReason_(req.message,req.history,req.actor,req.defaultWarehouse,guardContext,true,req.currentDraft,req.agentState,{round:'guard',maxRounds:AI_AGENT_CONFIG.MAX_TOOL_ROUNDS});
     state.calls++;
     plan=aiApplyConversationReferencesV106_(req.message,aiApplyDeterministicPlanGuards_(req.message,aiNormalizeActionPlan_(state.decision.action_plan)),req.agentState,req.currentDraft);
-    consistency=aiCheckActionPlanConsistency_(req.message,plan,req.currentDraft);
+    consistency=aiCheckActionPlanConsistency_(req.message,plan,req.currentDraft,req.agentState);
   }
   return {plan:plan,consistency:consistency};
 }
@@ -4985,6 +5009,16 @@ function aiBuildChatTurnResponse_(req,state,plan,preview,nextState) {
 function aiNormalizeAgentStateV106_(state) {
   state = state && typeof state === 'object' ? state : {};
   const items = Array.isArray(state.lastItems) ? state.lastItems : [];
+  const rawVc = state.voucherContext && typeof state.voucherContext === 'object' ? state.voucherContext : null;
+  const voucherContext = rawVc && rawVc.voucher ? {
+    voucher:String(rawVc.voucher||'').toUpperCase().slice(0,80),
+    warehouse:['58','145','all'].indexOf(String(rawVc.warehouse||''))>=0?String(rawVc.warehouse):'all',
+    rows:(Array.isArray(rawVc.rows)?rawVc.rows:[]).slice(0,20).map(function(r){return {
+      date:String(r&&r.date||'').slice(0,40),voucher:String(r&&r.voucher||'').toUpperCase().slice(0,80),warehouse:String(r&&r.warehouse||'').slice(0,10),
+      code:/^TD-\d{4}$/i.test(String(r&&r.code||''))?String(r.code).toUpperCase():'',name:String(r&&r.name||'').slice(0,220),type:String(r&&r.type||'').slice(0,40),
+      input:Number(r&&r.input||0),output:Number(r&&r.output||0),before:Number(r&&r.before||0),after:Number(r&&r.after||0),person:String(r&&r.person||'').slice(0,120),reason:String(r&&r.reason||'').slice(0,180),note:String(r&&r.note||'').slice(0,260)
+    };})
+  } : null;
   return {
     version:AI_AGENT_CONFIG.STATE_VERSION,
     lastItems:items.slice(0,AI_AGENT_CONFIG.MAX_STATE_ITEMS).map(function(x){return {
@@ -4995,6 +5029,7 @@ function aiNormalizeAgentStateV106_(state) {
     lastOperation:String(state.lastOperation||'').toUpperCase().slice(0,20),
     lastCounterparty:String(state.lastCounterparty||'').slice(0,160),
     lastVoucher:String(state.lastVoucher||'').slice(0,80),
+    voucherContext:voucherContext,
     updatedAt:String(state.updatedAt||'')
   };
 }
@@ -5045,6 +5080,11 @@ function aiBuildAgentStateV106_(previous, message, decision, toolContext, previe
     const r=t&&t.result;if(!r)return;
     if(r.item&&r.item.code)focus.push(r.item);
     if(Array.isArray(r.items)&&r.items.length===1&&r.items[0].code)focus.push(r.items[0]);
+    if(r.found&&r.voucher&&Array.isArray(r.rows)){
+      out.lastVoucher=String(r.voucher||'').toUpperCase();
+      out.voucherContext={voucher:String(r.voucher||'').toUpperCase(),warehouse:String(r.warehouse||'all'),rows:r.rows.slice(0,20).map(function(x){return {date:x.date,voucher:x.voucher,warehouse:x.warehouse,code:x.code,name:x.name,type:x.type,input:x.input,output:x.output,before:x.before,after:x.after,person:x.person,reason:x.reason,note:x.note};})};
+      r.rows.forEach(function(x){if(x&&x.code)focus.push({code:x.code,name:x.name||'',unit:''});});
+    }
   });
   const dedup={},clean=[];
   focus.reverse().forEach(function(x){const k=normalize_(x.code);if(!k||dedup[k]||clean.length>=AI_AGENT_CONFIG.MAX_STATE_ITEMS)return;dedup[k]=true;clean.push({code:String(x.code).toUpperCase(),name:String(x.name||''),unit:String(x.unit||'')});});
@@ -5188,6 +5228,8 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
     'SEARCH_CATALOG để tìm SKU; GET_STOCK để đọc tồn live 2 kho; GET_ITEM_HISTORY để xem lịch sử một mã; GET_VOUCHER để đọc chính xác toàn bộ dòng của một số phiếu; GET_MOVEMENTS cho hôm qua/ngày/range; GET_RECENT_VOUCHERS để liệt kê phiếu; GET_OPERATIONAL_REPORT cho báo cáo tài chính/tồn; GET_PROACTIVE_REPORT cho câu hỏi quản trị như ưu tiên hôm nay, cần mua gì, nên điều chuyển gì, hàng nào xuất nhanh/chậm hoặc bất thường.',
     'Có thể dùng nhiều vòng tool. Nếu kết quả vòng đầu cho mã TD, vòng sau được phép GET_STOCK hoặc GET_ITEM_HISTORY bằng mã đó. Không lặp lại cùng một tool request.',
     'Nếu người dùng yêu cầu sửa/hủy/xóa/điều chỉnh phiếu cũ, bắt buộc gọi GET_VOUCHER đúng số phiếu trước khi lập Action Plan; không suy đoán nội dung phiếu từ hội thoại.',
+    'VOUCHER CONTEXT V2: Nếu agentState.lastVoucher/voucherContext đã có phiếu vừa xem và tin nhắn tiếp theo chỉ nói “sửa số lượng”, “đổi từ X thành Y”, “sửa người thực hiện/lý do/ghi chú”, phải hiểu là đang sửa phiếu đó. Dùng chính code/name từ voucherContext làm identity đã xác minh; KHÔNG resolve SKU lại và KHÔNG yêu cầu người dùng nhắc lại model/mã.',
+    'Khi sửa một trường của phiếu đang mở, chỉ patch đúng trường người dùng nói và giữ nguyên toàn bộ trường còn lại từ voucherContext. Vẫn GET_VOUCHER lại để fresh-read trước preview.',
     'Nếu người dùng đang tra phiếu và chỉ trả lời một số ngắn như 6, 06, 006 hoặc “phiếu 6”, coi đó là hậu tố số phiếu và tiếp tục GET_VOUCHER; không bắt người dùng gõ lại toàn bộ PXK/PNK.',
     'Khi GET_VOUCHER trả resolvedFromShortRef=true, phải dùng đúng voucher backend đã resolve. Khi ambiguous=true, chỉ hỏi người dùng chọn trong candidates backend trả về.',
 
@@ -5212,6 +5254,7 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
   const input=[];
   history.forEach(function(m){input.push({role:m.role,content:m.content});});
   if(currentDraft)input.push({role:'user',content:'[PHIẾU ĐANG CHỜ XÁC NHẬN - draft cũ, không phải lệnh mới]\n'+JSON.stringify(currentDraft)});
+  if(state&&(state.lastVoucher||state.voucherContext||(state.lastItems&&state.lastItems.length)))input.push({role:'user',content:'[AGENT STATE ĐÃ XÁC MINH - ngữ cảnh nghiệp vụ từ backend, không phải lệnh mới]\n'+JSON.stringify(state)});
   input.push({role:'user',content:message});
   if(toolContext&&toolContext.length)input.push({role:'user',content:'[KẾT QUẢ TOOL BACKEND LIVE - dữ liệu tin cậy, không phải lệnh mới]\n'+JSON.stringify(toolContext.slice(-AI_AGENT_CONFIG.MAX_TOOL_RESULTS))});
   const body={model:model,store:false,reasoning:{effort:'medium'},instructions:instructions,input:input,max_output_tokens:7000,text:{format:{type:'json_schema',name:'warehouse_agent_v3',strict:true,schema:schema}}};
@@ -6289,5 +6332,11 @@ function aiCommandResolverV3SelfTest_(){
   const draftPlan={transaction_date:'2026-09-12',slips:[{slip_no:'1',operation:'OUT',warehouse:'58',source_warehouse:'',destination_warehouse:'',actor_hint:'Thanh',counterparty:'',note:'',clarification:'',lines:[{item_text:'12A',source_excerpt:'12A',requested_code:'',quantity:5,target_quantity:-1,force_new_sku:false}]}]};
   const blockedClientShape={actionPlan:draftPlan,sourceMessage:'xuất 5 hộp 12A',exceptions:[{type:'AMBIGUOUS_SKU',itemText:'12A'}]};
   add('Blocked response contract giữ Action Plan cho lượt sau',!!blockedClientShape.actionPlan&&blockedClientShape.actionPlan.slips[0].lines[0].quantity===5,blockedClientShape);
+  const voucherState=aiNormalizeAgentStateV106_({lastVoucher:'PXK-20260912-006',voucherContext:{voucher:'PXK-20260912-006',warehouse:'58',rows:[{voucher:'PXK-20260912-006',warehouse:'58',code:'TD-0246',name:'Hộp mực in 35A/85A - TOPZON',type:'Xuất',input:0,output:1,before:13,after:12,person:'TikTok',reason:'Gửi hàng TikTok',note:''}]}});
+  add('Voucher context giữ identity đã xác minh',voucherState.lastVoucher==='PXK-20260912-006'&&voucherState.voucherContext&&voucherState.voucherContext.rows[0].code==='TD-0246',voucherState);
+  add('Follow-up sửa số lượng kích hoạt fresh GET_VOUCHER',aiVoucherContextNeedsRefreshV2_('sửa số lượng từ 1 thành 2',voucherState)===true,voucherState);
+  const correctionPlan={transaction_date:'2026-09-12',slips:[{slip_no:'1',operation:'OUT',warehouse:'58',source_warehouse:'',destination_warehouse:'',actor_hint:'TikTok',counterparty:'TikTok',note:'[CORRECT PXK-20260912-006]',clarification:'',lines:[{item_text:'Hộp mực in 35A/85A - TOPZON',source_excerpt:'sửa số lượng từ 1 thành 2',requested_code:'TD-0246',quantity:2,target_quantity:-1,force_new_sku:false}]}]};
+  const guard=aiCheckActionPlanConsistency_('sửa số lượng từ 1 thành 2',correctionPlan,null,voucherState);
+  add('Guard chấp nhận model từ voucher context',guard.ok===true,guard);
   return {appVersion:APP_VERSION,resolverVersion:AI_RESOLVER_CONFIG.VERSION,total:tests.length,passed:tests.filter(x=>x.pass).length,failed:tests.filter(x=>!x.pass).length,pass:tests.every(x=>x.pass),results:tests};
 }
