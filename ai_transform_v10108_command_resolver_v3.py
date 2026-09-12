@@ -68,7 +68,6 @@ if old_decision not in code:
     raise SystemExit('Resolver decision anchor not found')
 code = code.replace(old_decision, new_decision, 1)
 
-# Blocked response now returns the action plan so the next user answer can continue the same draft.
 old_ret = """    clarification:'AI xác nhận CHƯA GHI SỔ. Không có thay đổi nào được ghi vào tồn kho hoặc nhật ký cho đến khi anh xử lý ngoại lệ và xác nhận lại.',
     exceptions:exceptions,unresolved:exceptions,createdAt:Utilities.formatDate(new Date(), DASHBOARD_CONFIG.TIME_ZONE, 'dd/MM/yyyy HH:mm:ss')"""
 new_ret = """    clarification:'AI xác nhận CHƯA GHI SỔ. Không có thay đổi nào được ghi vào tồn kho hoặc nhật ký cho đến khi anh xử lý ngoại lệ và xác nhận lại.',
@@ -79,7 +78,6 @@ if old_ret not in code:
     raise SystemExit('Blocked response anchor not found')
 code = code.replace(old_ret, new_ret, 1)
 
-# Strengthen agent policy: one clarification maximum, patch existing draft instead of rebuilding.
 agent_anchor = "    'Ưu tiên hiểu ngữ cảnh hội thoại. Không hỏi lại kho/người thực hiện nếu app đã cung cấp. Chỉ hỏi khi thiếu dữ liệu quan trọng hoặc có nhiều SKU thật sự khả dĩ.',"
 agent_extra = """    'Ưu tiên hiểu ngữ cảnh hội thoại. Không hỏi lại kho/người thực hiện nếu app đã cung cấp. Chỉ hỏi khi thiếu dữ liệu quan trọng hoặc có nhiều SKU thật sự khả dĩ.',
     'COMMAND RESOLVER V3: Với lệnh nhập/xuất, mục tiêu là tạo preview càng sớm càng tốt. Nếu SEARCH_CATALOG/tool live chỉ còn 1 SKU tương thích rõ ràng thì phải dùng SKU đó, KHÔNG hỏi người dùng đọc lại mã TD.',
@@ -90,7 +88,6 @@ if agent_anchor not in code:
     raise SystemExit('Agent instruction anchor not found')
 code = code.replace(agent_anchor, agent_extra, 1)
 
-# Frontend: preserve blocked action plan/exceptions across the next chat turn.
 pattern = re.compile(r"function aiDraftContextForChat\(data\)\{.*?\}\nfunction loadAiRecent", re.S)
 replacement = """function aiDraftContextForChat(data){
   if(!data)return null;
@@ -111,7 +108,6 @@ if n != 1:
     raise SystemExit(f'aiDraftContextForChat replacement count={n}')
 index = index2
 
-# Add deterministic V3 self-test.
 selftest = r'''
 
 function aiCommandResolverV3SelfTest_(){
@@ -139,7 +135,6 @@ if 'function aiCommandResolverV3SelfTest_' not in code:
 code_path.write_text(code, encoding='utf-8')
 index_path.write_text(index, encoding='utf-8')
 
-# Future transform/deploy runs must include the V3 suite and new version checks.
 for wf_path in (apply_wf, deploy_wf):
     if not wf_path.exists():
         continue
@@ -153,3 +148,4 @@ for wf_path in (apply_wf, deploy_wf):
     wf_path.write_text(wf, encoding='utf-8')
 
 print('V10.10.8 Command Resolver V3 transform complete')
+# retry after CI gate update
