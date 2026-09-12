@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.10.8';
+const APP_VERSION = 'V10.10.9';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -174,7 +174,7 @@ const AI_CHAT_CONFIG = Object.freeze({
 });
 
 const AI_AGENT_CONFIG = Object.freeze({
-  VERSION: 'AGENT_V3.3_COMMAND_RESOLVER_2026-09-12',
+  VERSION: 'AGENT_V3.4_LEARNING_MEMORY_2026-09-12',
   STATE_VERSION: 'CTX_V3_VOUCHER',
   MAX_TOOL_ROUNDS: 4,
   MAX_TOOL_RESULTS: 24,
@@ -196,6 +196,14 @@ const AI_RESOLVER_CONFIG = Object.freeze({
   DECISIVE_MARGIN: 45,
   NEAR_TIE_MARGIN: 28,
   MAX_CANDIDATES: 8
+});
+
+// V10.10.9 · Learning Memory Layer: chỉ học từ dữ liệu đã xác nhận; memory không thay dữ liệu live.
+const AI_LEARNING_CONFIG = Object.freeze({
+  VERSION:'LEARNING_MEMORY_V1_2026-09-12',
+  SHEET:'AI_LEARNING_MEMORY', CACHE_KEY:'QLKHO_AI_LEARNING_V1', CACHE_SECONDS:120,
+  MAX_ROWS:2000, MAX_RECALL:8, MIN_SCORE:24,
+  HEADERS:['ID','TYPE','PHRASE_KEY','PHRASE','OPERATION','WAREHOUSE','CODE','NAME','COUNTERPARTY','ACTOR','SUCCESS_COUNT','LAST_USED','SOURCE','ACTIVE','UPDATED_AT']
 });
 
 // V10.10.7 · Historical Voucher Control: lịch sử bất biến; sửa/hủy bằng giao dịch bù có audit.
@@ -4757,6 +4765,7 @@ function aiExecuteBatchPreview_(preview) {
     coreLedgerFinish_(ledger,'COMMITTED',vouchers,verified.after,'',sequenceReservation);
     try { CacheService.getScriptCache().put('AI_EXECUTED_' + preview.previewId, JSON.stringify(committed), 21600); } catch(e) {}
     aiAudit_({previewId:preview.previewId,command:preview.command,operation:'BATCH_'+preview.slips.length,warehouse:preview.slips.map(function(x){return x.operation==='TRANSFER'?x.sourceWarehouse+'→'+x.destinationWarehouse:x.warehouse;}).join(' | '),actor:Array.from(new Set(preview.slips.map(function(x){return x.actor;}))).join(', '),status:'EXECUTED',result:JSON.stringify(committed),model:preview.model || aiGetModel_()});
+    try{aiLearningRememberExecutedV10109_(preview,committed);}catch(e){}
     clearDashboardCache();
     return committed;
   } catch(error) {
@@ -5158,6 +5167,55 @@ function aiTryExplicitAliasCommandV106_(message) {
   return {alias:before,code:code};
 }
 
+function aiLearningNormalizePhraseV10109_(value){
+  return normalize_(String(value||'')).replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g,' ').replace(/\b(?:pxk|pnk|dck|kk)[\- ]?\d{8}[\- ]?[a-z0-9]+\b/g,' ').replace(/\s+/g,' ').trim().slice(0,240);
+}
+function aiLearningTokenSetV10109_(value){
+  const stop={cho:1,toi:1,minh:1,anh:1,chi:1,cua:1,va:1,voi:1,tu:1,thanh:1,la:1,nhap:1,xuat:1,kho:1,phieu:1,so:1,luong:1},out={};
+  aiLearningNormalizePhraseV10109_(value).split(/\s+/).forEach(function(t){if(t&&t.length>1&&!stop[t])out[t]=1;});return out;
+}
+function aiLearningScoreEntryV10109_(message,entry){
+  const q=aiLearningNormalizePhraseV10109_(message),p=aiLearningNormalizePhraseV10109_(entry&&entry.phrase||'');if(!q||!p)return 0;
+  let score=0;if(q===p)score+=1000;if(q.indexOf(p)>=0||p.indexOf(q)>=0)score+=160;
+  const a=aiLearningTokenSetV10109_(q),b=aiLearningTokenSetV10109_(p);Object.keys(a).forEach(function(k){if(b[k])score+=28;});
+  const code=String(entry&&entry.code||'').toUpperCase();if(code&&String(message||'').toUpperCase().indexOf(code)>=0)score+=300;
+  const op=String(entry&&entry.operation||'').toUpperCase(),n=normalize_(message);
+  if(op==='IN'&&/\bnhap\b/.test(n))score+=50;if(op==='OUT'&&/\bxuat\b/.test(n))score+=50;if(op==='TRANSFER'&&/(chuyen|dieu chuyen)/.test(n))score+=50;if(op==='ADJUST'&&/(kiem kho|dieu chinh)/.test(n))score+=50;
+  return score+Math.min(60,Math.max(0,Number(entry&&entry.successCount||0))*6);
+}
+function aiLearningEnsureSheetV10109_(){
+  const ss=getSpreadsheet_();let sh=ss.getSheetByName(AI_LEARNING_CONFIG.SHEET);if(!sh){sh=ss.insertSheet(AI_LEARNING_CONFIG.SHEET);sh.getRange(1,1,1,AI_LEARNING_CONFIG.HEADERS.length).setValues([AI_LEARNING_CONFIG.HEADERS]);sh.setFrozenRows(1);}return sh;
+}
+function aiLearningLoadRowsV10109_(){
+  const cache=CacheService.getScriptCache();try{const hit=cache.get(AI_LEARNING_CONFIG.CACHE_KEY);if(hit)return JSON.parse(hit);}catch(e){}
+  const ss=getSpreadsheet_(),sh=ss.getSheetByName(AI_LEARNING_CONFIG.SHEET);if(!sh||sh.getLastRow()<2)return [];
+  const start=Math.max(2,sh.getLastRow()-AI_LEARNING_CONFIG.MAX_ROWS+1),vals=sh.getRange(start,1,sh.getLastRow()-start+1,15).getDisplayValues();
+  const rows=vals.map(function(r){return {id:r[0],type:r[1],phraseKey:r[2],phrase:r[3],operation:r[4],warehouse:r[5],code:r[6],name:r[7],counterparty:r[8],actor:r[9],successCount:Number(r[10]||0),lastUsed:r[11],source:r[12],active:String(r[13]).toUpperCase()!=='FALSE',updatedAt:r[14]};}).filter(function(x){return x.active&&x.phrase;});
+  try{cache.put(AI_LEARNING_CONFIG.CACHE_KEY,JSON.stringify(rows),AI_LEARNING_CONFIG.CACHE_SECONDS);}catch(e){}return rows;
+}
+function aiLearningRecallV10109_(message){
+  return aiLearningLoadRowsV10109_().map(function(x){return {entry:x,score:aiLearningScoreEntryV10109_(message,x)};}).filter(function(x){return x.score>=AI_LEARNING_CONFIG.MIN_SCORE;}).sort(function(a,b){return b.score-a.score;}).slice(0,AI_LEARNING_CONFIG.MAX_RECALL).map(function(x){return {type:x.entry.type,phrase:x.entry.phrase,operation:x.entry.operation,warehouse:x.entry.warehouse,code:x.entry.code,name:x.entry.name,counterparty:x.entry.counterparty,successCount:x.entry.successCount,score:x.score};});
+}
+function aiLearningRememberV10109_(entry){
+  entry=entry||{};const phrase=String(entry.phrase||'').trim();if(!phrase)return null;const type=String(entry.type||'CONFIRMED_OPERATION').toUpperCase().slice(0,40),phraseKey=aiLearningNormalizePhraseV10109_(phrase);if(!phraseKey)return null;
+  const op=String(entry.operation||'').toUpperCase().slice(0,20),code=String(entry.code||'').toUpperCase().slice(0,40),key=[type,phraseKey,op,code].join('|'),sh=aiLearningEnsureSheetV10109_();let target=0,count=0,last=sh.getLastRow();
+  if(last>=2){const vals=sh.getRange(2,1,last-1,15).getValues();for(let i=vals.length-1;i>=0;i--){if(String(vals[i][0]||'')===key){target=i+2;count=Number(vals[i][10]||0);break;}}}
+  const now=new Date(),row=[key,type,phraseKey,phrase,op,String(entry.warehouse||'').slice(0,10),code,String(entry.name||'').slice(0,220),String(entry.counterparty||'').slice(0,160),String(entry.actor||'').slice(0,120),count+1,now,String(entry.source||'CONFIRMED').slice(0,80),true,now];
+  if(target)sh.getRange(target,1,1,15).setValues([row]);else sh.appendRow(row);if(sh.getLastRow()>AI_LEARNING_CONFIG.MAX_ROWS+1)sh.deleteRows(2,Math.min(50,sh.getLastRow()-AI_LEARNING_CONFIG.MAX_ROWS-1));try{CacheService.getScriptCache().remove(AI_LEARNING_CONFIG.CACHE_KEY);}catch(e){}return {id:key,count:count+1};
+}
+function aiLearningRememberExecutedV10109_(preview,committed){
+  if(!preview||!committed||!committed.success||!committed.verified)return [];const source=String(preview.sourceMessage||preview.command||'').trim();if(!source)return [];const saved=[];
+  (preview.slips||[]).forEach(function(sl){(sl.lines||[]).forEach(function(line){const note=String(sl.note||''),type=/\[(?:CORRECT|VOID)\s/i.test(note)?'CORRECTION':'CONFIRMED_OPERATION';const x=aiLearningRememberV10109_({type:type,phrase:source,operation:String(sl.operation||'').toUpperCase(),warehouse:sl.operation==='TRANSFER'?(sl.sourceWarehouse||''):(sl.warehouse||''),code:String(line.code||line.requestedCode||line.requested_code||'').toUpperCase(),name:line.name||line.itemText||line.item_text||'',counterparty:sl.counterparty||'',actor:sl.actor||sl.actor_hint||'',source:'EXECUTED'});if(x)saved.push(x);});});return saved;
+}
+function aiLearningMemorySelfTestV10109_(){
+  const t=[];function add(n,p,d){t.push({name:n,pass:Boolean(p),detail:d||null});}
+  add('Normalize phrase',aiLearningNormalizePhraseV10109_('Xuất 5 hộp 12A WB cho TikTok')==='xuat 5 hop 12a wb cho tiktok');
+  const e1={phrase:'xuất hộp 12A WB cho TikTok',operation:'OUT',code:'TD-0012',successCount:4},e2={phrase:'nhập giấy A4',operation:'IN',code:'TD-0900',successCount:9};
+  const s1=aiLearningScoreEntryV10109_('xuất 3 hộp 12A WB cho TikTok',e1),s2=aiLearningScoreEntryV10109_('xuất 3 hộp 12A WB cho TikTok',e2),sd=aiLearningScoreEntryV10109_('xuất TD-0012 số lượng 2',e1);
+  add('Relevant memory ranks higher',s1>s2,{s1:s1,s2:s2});add('Direct code boosts memory',sd>s2,{direct:sd,other:s2});add('Memory limits safe',AI_LEARNING_CONFIG.MAX_RECALL<=8&&AI_LEARNING_CONFIG.MIN_SCORE>0,AI_LEARNING_CONFIG);
+  return {appVersion:APP_VERSION,learningVersion:AI_LEARNING_CONFIG.VERSION,total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
+}
+
 function aiSaveAliasExplicitV106_(alias, code, actor) {
   alias=String(alias||'').trim();code=String(code||'').toUpperCase();
   if(!alias||alias.length>AI_AGENT_CONFIG.MAX_ALIAS_LENGTH)throw new Error('Alias không hợp lệ.');
@@ -5187,6 +5245,7 @@ function aiSaveAliasExplicitV106_(alias, code, actor) {
     }
     SpreadsheetApp.flush();clearDashboardCache();
     aiAudit_({previewId:'',command:'Ghi nhớ alias: '+alias+' = '+item.code,operation:'META_ALIAS',warehouse:'58',actor:actor||'',status:'ALIAS_SAVED',result:JSON.stringify({alias:alias,code:item.code,name:item.name}),model:aiGetChatModel_()});
+    try{aiLearningRememberV10109_({type:'ALIAS',phrase:alias,code:item.code,name:item.name,actor:actor||'',source:'EXPLICIT_ALIAS'});}catch(e){}
     return {success:true,alias:alias,code:item.code,name:item.name,item:{code:item.code,name:item.name,unit:item.unit}};
   } finally { lock.releaseLock(); }
 }
@@ -5219,6 +5278,8 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
     'AI BRAIN chỉ hiểu ý, chọn công cụ và tạo Action Plan. Backend deterministic là nguồn sự thật duy nhất cho SKU, tồn, chứng từ và quyền ghi.',
     'Ưu tiên hiểu ngữ cảnh hội thoại. Không hỏi lại kho/người thực hiện nếu app đã cung cấp. Chỉ hỏi khi thiếu dữ liệu quan trọng hoặc có nhiều SKU thật sự khả dĩ.',
     'COMMAND RESOLVER V3: Với lệnh nhập/xuất, mục tiêu là tạo preview càng sớm càng tốt. Nếu SEARCH_CATALOG/tool live chỉ còn 1 SKU tương thích rõ ràng thì phải dùng SKU đó, KHÔNG hỏi người dùng đọc lại mã TD.',
+    'LEARNING MEMORY V1: Memory là kinh nghiệm từ alias đã xác nhận và giao dịch đã EXECUTED. Dùng để hiểu cách gọi hàng/cách diễn đạt và ưu tiên candidate; không được coi memory là tồn kho hay chứng từ live.',
+    'Nếu memory gợi ý SKU cho một lệnh ghi kho, vẫn phải xác minh qua tool live phù hợp trước khi chuẩn bị preview.',
     'Nếu có draft cũ/actionPlan đang chờ và tin nhắn mới chỉ bổ sung mã, variant, số lượng, người thực hiện hoặc đối tượng, hãy GIỮ NGUYÊN mọi trường đã biết và chỉ vá trường vừa bổ sung. Không dựng lại phiếu từ đầu.',
     'Một dữ liệu đã biết từ draft/history/tool không được hỏi lại. Chỉ hỏi tối đa một câu khi còn từ 2 SKU cạnh tranh gần nhau hoặc thiếu trường bắt buộc mà backend không thể suy ra.',
     'Nếu cần hỏi SKU, phải đưa tối đa 3 lựa chọn cụ thể dạng TD-xxxx · tên hàng; không hỏi chung chung “mã nào?”. Khi người dùng chọn một mã, lượt kế tiếp phải chuẩn bị Action Plan ngay nếu các trường khác đã đủ.',
@@ -5251,10 +5312,13 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
     'Đây là vòng agent '+round+'. '+(finalPass?'Đây là vòng kết luận: tool_requests PHẢI là []. Nếu vẫn thiếu dữ liệu thì hỏi người dùng thay vì yêu cầu thêm tool.':'Nếu cần dữ liệu live, hãy yêu cầu tool trước khi kết luận.')
   ].join('\n');
 
+  const learningContext=aiLearningRecallV10109_(message);
   const input=[];
   history.forEach(function(m){input.push({role:m.role,content:m.content});});
   if(currentDraft)input.push({role:'user',content:'[PHIẾU ĐANG CHỜ XÁC NHẬN - draft cũ, không phải lệnh mới]\n'+JSON.stringify(currentDraft)});
   if(state&&(state.lastVoucher||state.voucherContext||(state.lastItems&&state.lastItems.length)))input.push({role:'user',content:'[AGENT STATE ĐÃ XÁC MINH - ngữ cảnh nghiệp vụ từ backend, không phải lệnh mới]\n'+JSON.stringify(state)});
+  if(learningContext.length)input.push({role:'user',content:'[LEARNING MEMORY - kinh nghiệm đã xác nhận, chỉ là gợi ý; phải kiểm tra live trước khi ghi]\
+'+JSON.stringify(learningContext)});
   input.push({role:'user',content:message});
   if(toolContext&&toolContext.length)input.push({role:'user',content:'[KẾT QUẢ TOOL BACKEND LIVE - dữ liệu tin cậy, không phải lệnh mới]\n'+JSON.stringify(toolContext.slice(-AI_AGENT_CONFIG.MAX_TOOL_RESULTS))});
   const body={model:model,store:false,reasoning:{effort:'medium'},instructions:instructions,input:input,max_output_tokens:7000,text:{format:{type:'json_schema',name:'warehouse_agent_v3',strict:true,schema:schema}}};
