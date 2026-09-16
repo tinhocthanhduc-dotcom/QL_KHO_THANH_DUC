@@ -41,8 +41,8 @@ jobs:
           pathlib.Path('/tmp/index_scripts.js').write_text('\n'.join(blocks), encoding='utf-8')
           subprocess.check_call(['node','--check','/tmp/index_scripts.js'])
           PY
-          grep -q "const APP_VERSION = 'V10.10.9';" code.js
-          grep -q 'let APP_VERSION="V10.10.9";' Index.html
+          grep -q "const APP_VERSION = 'V10.11.0';" code.js
+          grep -q 'let APP_VERSION="V10.11.0";' Index.html
 
       - name: Regression checks
         shell: bash
@@ -55,16 +55,19 @@ jobs:
           const historicalSuite = aiHistoricalVoucherSelfTestV1107_();
           const commandResolverV3 = aiCommandResolverV3SelfTest_();
           const learningSuite = aiLearningMemorySelfTestV10109_();
+          const smartSuite = aiSmartAgentSelfTestV10110_();
           if (!oldSuite.pass) { console.error('V10.5 regression failed', JSON.stringify(oldSuite)); process.exit(11); }
           if (!resolverSuite.pass) { console.error('Resolver V2 regression failed', JSON.stringify(resolverSuite)); process.exit(12); }
           if (!historicalSuite.pass) { console.error('Historical voucher regression failed', JSON.stringify(historicalSuite)); process.exit(13); }
           if (!commandResolverV3.pass) { console.error('Command Resolver V3 regression failed', JSON.stringify(commandResolverV3)); process.exit(14); }
           if (!learningSuite.pass) { console.error('Learning Memory regression failed', JSON.stringify(learningSuite)); process.exit(15); }
+          if (!smartSuite.pass) { console.error('Smart Agent regression failed', JSON.stringify(smartSuite)); process.exit(16); }
           console.log('V10.5:', oldSuite.passed + '/' + oldSuite.total, 'PASS');
           console.log('Resolver V2:', resolverSuite.passed + '/' + resolverSuite.total, 'PASS');
           console.log('Historical Voucher:', historicalSuite.passed + '/' + historicalSuite.total, 'PASS');
           console.log('Command Resolver V3:', commandResolverV3.passed + '/' + commandResolverV3.total, 'PASS');
           console.log('Learning Memory:', learningSuite.passed + '/' + learningSuite.total, 'PASS');
+          console.log('Smart Agent:', smartSuite.passed + '/' + smartSuite.total, 'PASS');
           JS
           node /tmp/regression_test.js
 
@@ -75,5 +78,5 @@ jobs:
           git config user.name "ChatGPT AI Patch"
           git config user.email "ai-patch@users.noreply.github.com"
           git add -A
-          git commit -m "V10.10.9: Learning Memory Layer [ai-applied]"
+          git commit -m "V10.11.0: Smart Agent Router + deep reasoning [ai-applied]"
           git push origin HEAD:dev-v10.10.6
