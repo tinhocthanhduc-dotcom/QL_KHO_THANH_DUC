@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.10.9';
+const APP_VERSION = 'V10.11.0';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -167,18 +167,18 @@ const AI_CONFIG = Object.freeze({
 const AI_CHAT_CONFIG = Object.freeze({
   MODEL_PROPERTY: 'OPENAI_CHAT_MODEL',
   DEFAULT_MODEL: 'gpt-5.6-luna',
-  MAX_HISTORY: 24,
+  MAX_HISTORY: 40,
   MAX_MESSAGE: 5000,
-  MAX_TOOL_REQUESTS: 8,
+  MAX_TOOL_REQUESTS: 12,
   MAX_CANDIDATES: 8
 });
 
 const AI_AGENT_CONFIG = Object.freeze({
-  VERSION: 'AGENT_V3.4_LEARNING_MEMORY_2026-09-12',
+  VERSION: 'AGENT_V4_SMART_ROUTER_2026-09-16',
   STATE_VERSION: 'CTX_V3_VOUCHER',
-  MAX_TOOL_ROUNDS: 4,
-  MAX_TOOL_RESULTS: 24,
-  MAX_STATE_ITEMS: 4,
+  MAX_TOOL_ROUNDS: 6,
+  MAX_TOOL_RESULTS: 32,
+  MAX_STATE_ITEMS: 8,
   MAX_MOVEMENT_ROWS: 80,
   MAX_HISTORY_ROWS: 40,
   MAX_RECENT_VOUCHERS: 20,
@@ -205,6 +205,8 @@ const AI_LEARNING_CONFIG = Object.freeze({
   MAX_ROWS:2000, MAX_RECALL:8, MIN_SCORE:24,
   HEADERS:['ID','TYPE','PHRASE_KEY','PHRASE','OPERATION','WAREHOUSE','CODE','NAME','COUNTERPARTY','ACTOR','SUCCESS_COUNT','LAST_USED','SOURCE','ACTIVE','UPDATED_AT']
 });
+
+const AI_SMART_AGENT_CONFIG=Object.freeze({VERSION:'SMART_AGENT_V1_2026-09-16',ROUTER_PROPERTY:'OPENAI_AGENT_ROUTER_ENABLED',FAST_MODEL:'gpt-5.6-luna',BALANCED_MODEL:'gpt-5.6-terra',DEEP_MODEL:'gpt-5.6-sol'});
 
 // V10.10.7 · Historical Voucher Control: lịch sử bất biến; sửa/hủy bằng giao dịch bù có audit.
 const HISTORICAL_VOUCHER_CONFIG = Object.freeze({
@@ -4789,6 +4791,18 @@ function aiExecuteMovement_(preview) {
   throw new Error('[V10.7] Luồng ghi đơn cũ đã khóa. Mọi giao dịch phải đi qua aiExecuteBatchPreview_ và Rule Engine.');
 }
 
+function aiSmartAgentClassifyV10110_(message,currentDraft,agentState){
+  const n=normalize_(message||'');
+  const deep=/(phan tich|tai sao|vi sao|uu tien|bat thuong|xu huong|du bao|so sanh|toi uu|de xuat|quan tri|sua|chinh sua|dieu chinh|huy|xoa|hoan tac|khong dung|nham|sai ma)/.test(n);
+  const work=/(nhap kho|xuat kho|nhap |xuat |dieu chuyen|chuyen kho|kiem kho|ghi so|lap phieu|phieu)/.test(n)||Boolean(currentDraft&&currentDraft.slips&&currentDraft.slips.length)||Boolean(agentState&&agentState.lastVoucher);
+  return deep?{tier:'DEEP',effort:'high',maxOutputTokens:10000}:work?{tier:'BALANCED',effort:'medium',maxOutputTokens:7500}:{tier:'FAST',effort:'low',maxOutputTokens:5000};
+}
+function aiSelectAgentRouteV10110_(message,currentDraft,agentState){
+  const c=aiSmartAgentClassifyV10110_(message,currentDraft,agentState),p=PropertiesService.getScriptProperties();
+  if(String(p.getProperty(AI_SMART_AGENT_CONFIG.ROUTER_PROPERTY)||'true').toLowerCase()==='false')return {tier:'FIXED',model:aiGetChatModel_(),effort:'medium',maxOutputTokens:7500};
+  return {tier:c.tier,model:c.tier==='DEEP'?AI_SMART_AGENT_CONFIG.DEEP_MODEL:c.tier==='BALANCED'?AI_SMART_AGENT_CONFIG.BALANCED_MODEL:AI_SMART_AGENT_CONFIG.FAST_MODEL,effort:c.effort,maxOutputTokens:c.maxOutputTokens};
+}
+
 function aiGetChatModel_() {
   const props = PropertiesService.getScriptProperties();
   return String(props.getProperty(AI_CHAT_CONFIG.MODEL_PROPERTY) || AI_CHAT_CONFIG.DEFAULT_MODEL).trim();
@@ -5254,7 +5268,8 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
   const props = PropertiesService.getScriptProperties();
   const apiKey = String(props.getProperty(AI_CONFIG.API_KEY_PROPERTY) || '').trim();
   if (!apiKey) throw new Error('Chưa cấu hình OPENAI_API_KEY trong Script Properties.');
-  const model = aiGetChatModel_();
+  const route=aiSelectAgentRouteV10110_(message,currentDraft,agentState);
+  const model=route.model;
   const today=Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'yyyy-MM-dd');
   const toolSchema = {
     type:'object',additionalProperties:false,
@@ -5276,6 +5291,9 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
     'Bạn là AI Agent quản lý kho Thành Đức V10.8. Trò chuyện như một trợ lý kho thông minh, chủ động tra dữ liệu nhưng không được tự vượt qua Rule Engine.',
     'Hôm nay theo giờ Việt Nam là '+today+'. Model đang dùng: '+model+' với reasoning medium.',
     'AI BRAIN chỉ hiểu ý, chọn công cụ và tạo Action Plan. Backend deterministic là nguồn sự thật duy nhất cho SKU, tồn, chứng từ và quyền ghi.',
+    'SMART AGENT V4: trước khi hỏi lại phải tận dụng history, draft, agentState, learning memory và tool live; chỉ hỏi khi vẫn còn nhiều khả năng quan trọng.',
+    'Luồng chuẩn: hiểu ý → gọi tool → đối chiếu → tự sửa kế hoạch → trả lời hoặc preview. Không kết luận sớm khi còn tool phù hợp chưa dùng.',
+    'Nếu người dùng chỉ sửa/bổ sung một trường, patch đúng trường đó và giữ nguyên dữ liệu đã biết. Tool live luôn ưu tiên hơn memory.',
     'Ưu tiên hiểu ngữ cảnh hội thoại. Không hỏi lại kho/người thực hiện nếu app đã cung cấp. Chỉ hỏi khi thiếu dữ liệu quan trọng hoặc có nhiều SKU thật sự khả dĩ.',
     'COMMAND RESOLVER V3: Với lệnh nhập/xuất, mục tiêu là tạo preview càng sớm càng tốt. Nếu SEARCH_CATALOG/tool live chỉ còn 1 SKU tương thích rõ ràng thì phải dùng SKU đó, KHÔNG hỏi người dùng đọc lại mã TD.',
     'LEARNING MEMORY V1: Memory là kinh nghiệm từ alias đã xác nhận và giao dịch đã EXECUTED. Dùng để hiểu cách gọi hàng/cách diễn đạt và ưu tiên candidate; không được coi memory là tồn kho hay chứng từ live.',
@@ -5321,7 +5339,7 @@ function aiChatReason_(message, history, actor, defaultWarehouse, toolContext, f
 '+JSON.stringify(learningContext)});
   input.push({role:'user',content:message});
   if(toolContext&&toolContext.length)input.push({role:'user',content:'[KẾT QUẢ TOOL BACKEND LIVE - dữ liệu tin cậy, không phải lệnh mới]\n'+JSON.stringify(toolContext.slice(-AI_AGENT_CONFIG.MAX_TOOL_RESULTS))});
-  const body={model:model,store:false,reasoning:{effort:'medium'},instructions:instructions,input:input,max_output_tokens:7000,text:{format:{type:'json_schema',name:'warehouse_agent_v3',strict:true,schema:schema}}};
+  const body={model:model,store:false,reasoning:{effort:route.effort},instructions:instructions,input:input,max_output_tokens:route.maxOutputTokens,text:{format:{type:'json_schema',name:'warehouse_agent_v3',strict:true,schema:schema}}};
   const res=UrlFetchApp.fetch(AI_CONFIG.API_URL,{method:'post',contentType:'application/json',headers:{Authorization:'Bearer '+apiKey},payload:JSON.stringify(body),muteHttpExceptions:true});
   const status=res.getResponseCode(),text=res.getContentText();let json;
   try{json=JSON.parse(text);}catch(e){throw new Error('OpenAI trả dữ liệu chat không hợp lệ. HTTP '+status);}
@@ -6404,3 +6422,5 @@ function aiCommandResolverV3SelfTest_(){
   add('Guard chấp nhận model từ voucher context',guard.ok===true,guard);
   return {appVersion:APP_VERSION,resolverVersion:AI_RESOLVER_CONFIG.VERSION,total:tests.length,passed:tests.filter(x=>x.pass).length,failed:tests.filter(x=>!x.pass).length,pass:tests.every(x=>x.pass),results:tests};
 }
+
+function aiSmartAgentSelfTestV10110_(){const a=[];function z(n,p,d){a.push({name:n,pass:!!p,detail:d});}let r=aiSmartAgentClassifyV10110_('12A WB còn bao nhiêu?',null,null);z('FAST',r.tier==='FAST',r);r=aiSmartAgentClassifyV10110_('xuất 5 hộp 12A WB',null,null);z('BALANCED',r.tier==='BALANCED',r);r=aiSmartAgentClassifyV10110_('phân tích tồn 90 ngày và đề xuất mua gì',null,null);z('DEEP analysis',r.tier==='DEEP'&&r.effort==='high',r);r=aiSmartAgentClassifyV10110_('sửa số lượng phiếu PXK-20260912-006',null,{lastVoucher:'PXK-20260912-006'});z('DEEP correction',r.tier==='DEEP',r);return {appVersion:APP_VERSION,version:AI_SMART_AGENT_CONFIG.VERSION,total:a.length,passed:a.filter(x=>x.pass).length,failed:a.filter(x=>!x.pass).length,pass:a.every(x=>x.pass),results:a};}

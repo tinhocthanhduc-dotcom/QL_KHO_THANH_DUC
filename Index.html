@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.10.8</title>
+<title>QL KHO THÀNH ĐỨC · V10.11.0</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -544,7 +544,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.10.9";
+let APP_VERSION="V10.11.0";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
