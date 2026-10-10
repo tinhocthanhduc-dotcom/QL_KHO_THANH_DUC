@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.15.0';
+const APP_VERSION = 'V10.15.1';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -5736,6 +5736,32 @@ function inventoryVoucherStorePreviewV10131_(preview){
   aiAudit_({previewId:id,command:preview.command,operation:'VOUCHER_'+String(preview.correctionType||''),warehouse:(preview.slips||[]).map(function(s){return s.warehouse;}).join(' | '),actor:(preview.slips||[]).map(function(s){return s.actor;}).join(', '),status:'VOUCHER_ADJUST_PREVIEW',result:JSON.stringify({originalVoucher:preview.originalVoucher,correctionType:preview.correctionType}),model:'DETERMINISTIC_VOUCHER_3B'});
   return preview;
 }
+// Stage 5: reject ambiguous correction quantities instead of silently rounding or overwriting.
+function voucherCorrectionValidateLinesV10151_(raw,originalLines){
+  if(!Array.isArray(raw))throw new Error('Thiếu danh sách số lượng sửa.');
+  const originals={},provided={};
+  (originalLines||[]).forEach(function(l){originals[String(l.code||'').trim().toUpperCase()]=true;});
+  raw.forEach(function(l){
+    const code=String(l&&l.code||'').trim().toUpperCase(),qty=l&&l.qty;
+    if(!code||!Object.prototype.hasOwnProperty.call(originals,code))throw new Error('Không được thêm hoặc đổi SKU khi sửa: '+(code||'(trống)'));
+    if(Object.prototype.hasOwnProperty.call(provided,code))throw new Error('Trùng mã hàng trong dữ liệu sửa: '+code);
+    if(qty===null||qty===undefined||String(qty).trim()===''||!Number.isSafeInteger(Number(qty))||Number(qty)<0)throw new Error('Số lượng sửa của '+code+' phải là số nguyên không âm.');
+    provided[code]=Number(qty);
+  });
+  Object.keys(originals).forEach(function(code){if(!Object.prototype.hasOwnProperty.call(provided,code))throw new Error('Thiếu số lượng mới cho '+code);});
+  return provided;
+}
+function voucherCorrectionPhase5SelfTestV10151_(){
+  const base=[{code:'TD-0001',qty:2},{code:'TD-0002',qty:4}],checks=[];
+  function test(name,fn,expected){let ok=false;try{const value=fn();ok=expected==='OK'&&!!value;}catch(e){ok=expected==='ERR';}checks.push({name:name,pass:ok});}
+  test('valid correction',function(){return voucherCorrectionValidateLinesV10151_([{code:'TD-0001',qty:3},{code:'TD-0002',qty:0}],base);},'OK');
+  test('decimal rejected',function(){return voucherCorrectionValidateLinesV10151_([{code:'TD-0001',qty:1.5},{code:'TD-0002',qty:2}],base);},'ERR');
+  test('missing qty rejected',function(){return voucherCorrectionValidateLinesV10151_([{code:'TD-0001',qty:''},{code:'TD-0002',qty:2}],base);},'ERR');
+  test('duplicate SKU rejected',function(){return voucherCorrectionValidateLinesV10151_([{code:'TD-0001',qty:2},{code:'TD-0001',qty:3},{code:'TD-0002',qty:4}],base);},'ERR');
+  test('unknown SKU rejected',function(){return voucherCorrectionValidateLinesV10151_([{code:'TD-0001',qty:2},{code:'TD-0099',qty:3}],base);},'ERR');
+  test('missing SKU rejected',function(){return voucherCorrectionValidateLinesV10151_([{code:'TD-0001',qty:2}],base);},'ERR');
+  return {version:'V10.15.1',total:checks.length,passed:checks.filter(function(x){return x.pass;}).length,failed:checks.filter(function(x){return !x.pass;}).length,pass:checks.every(function(x){return x.pass;}),results:checks};
+}
 function prepareVoucherAdjustmentV10131(payload){
   payload=payload||{};
   const voucher=String(payload.voucher||'').trim().toUpperCase();
@@ -5765,8 +5791,7 @@ function prepareVoucherAdjustmentV10131(payload){
   const slips=[{slipNo:'R1',operation:reverseOp,warehouse:warehouse,sourceWarehouse:'',destinationWarehouse:'',actor:actor,counterparty:summary.counterparty||actor,businessReason:(action==='VOID'?'Hoàn tác phiếu ':'Đảo phiếu để sửa ')+voucher,note:reversalNote,lines:originalLines.map(function(l){return {code:l.code,quantity:l.qty,itemText:l.code,sourceExcerpt:l.code};})}];
   let replacementLines=[];
   if(action==='CORRECT'){
-    const raw=Array.isArray(payload.lines)?payload.lines:[];
-    const map={};raw.forEach(function(l){const code=String(l&&l.code||'').trim().toUpperCase();if(code)map[code]=Math.max(0,Math.floor(toNumber_(l.qty)));});
+    const map=voucherCorrectionValidateLinesV10151_(payload.lines,originalLines);
     const originalCodes=originalLines.map(function(l){return l.code;});
     Object.keys(map).forEach(function(code){if(originalCodes.indexOf(code)<0)throw new Error('Không được đổi/thêm SKU khi sửa phiếu. Mã lạ: '+code);});
     originalCodes.forEach(function(code){if(!Object.prototype.hasOwnProperty.call(map,code))throw new Error('Thiếu số lượng mới cho '+code+'.');});
