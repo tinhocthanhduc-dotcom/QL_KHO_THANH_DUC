@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.12.3</title>
+<title>QL KHO THÀNH ĐỨC · V10.12.4</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -28,7 +28,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 .drawer-back{position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:60;display:none}.drawer-back.open{display:block}.drawer{position:absolute;right:0;top:0;height:100%;width:min(620px,95vw);background:#fff;box-shadow:-20px 0 50px rgba(15,23,42,.2);padding:18px;overflow:auto}.drawer-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.drawer-head h2{margin:0 0 4px;font-size:20px}.drawer-head p{margin:0;color:#667085;font-size:12px}.close{border:0;background:#f2f4f7;border-radius:9px;width:34px;height:34px;cursor:pointer;font-weight:900}.detail-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.detail-kpi{border:1px solid #eaecf0;border-radius:12px;padding:10px;text-align:center}.detail-kpi span{display:block;font-size:11px;color:#667085}.detail-kpi strong{display:block;font-size:20px;margin-top:4px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:11px;color:#667085;font-weight:800}.checkline{display:flex;align-items:center;gap:8px;font-size:11px!important;color:#344054!important}.checkline input{width:17px!important;height:17px!important;accent-color:#1d4ed8}.field input{height:42px;padding:0 12px;font-size:14px}.field textarea{min-height:78px;padding:9px;resize:vertical}.drawer-actions{display:flex;gap:8px;justify-content:flex-end;margin:10px 0 15px}.history{margin-top:14px}.history table{min-width:850px}
 .modal-back{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:70;display:none;align-items:center;justify-content:center;padding:18px}.modal-back.open{display:flex}.modal{width:min(520px,96vw);background:#fff;border-radius:18px;padding:18px;box-shadow:0 24px 70px rgba(15,23,42,.28)}.modal h2{margin:0 0 7px;font-size:20px}.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:13px}.toast{position:fixed;right:20px;bottom:20px;z-index:100;background:#101828;color:#fff;border-radius:12px;padding:10px 13px;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s;font-size:12px;max-width:420px}.toast.show{opacity:1;transform:translateY(0)}
 
-/* V10.12.3 · Nhập / Xuất kho · Phase 1 */
+/* V10.12.4 · Nhập / Xuất kho · Phase 1 */
 .io-layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
 .io-builder{padding:18px}.io-preview-side{padding:18px;position:sticky;top:96px}
 .io-modebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.io-mode{height:44px;padding:0 18px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#344054;font-weight:850;cursor:pointer}.io-mode.active.in{background:#ecfdf3;border-color:#86efac;color:#166534}.io-mode.active.out{background:#fff7ed;border-color:#fdba74;color:#9a3412}
@@ -36,7 +36,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 .io-items{margin-top:16px;border-top:1px solid #eaecf0;padding-top:15px}.io-items-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}.io-items-head h3{margin:0;font-size:16px}.io-search-wrap{position:relative;margin-bottom:10px}.io-search-wrap input{width:100%;height:46px;border:1px solid #cfd7e6;border-radius:13px;padding:0 14px;font-size:14px;outline:none}.io-search-wrap input:focus{border-color:#93b4f4;box-shadow:0 0 0 3px rgba(37,99,235,.10)}
 .io-search-results{position:absolute;left:0;right:0;top:50px;z-index:25;background:#fff;border:1px solid #d0d5dd;border-radius:13px;box-shadow:0 14px 36px rgba(15,23,42,.15);max-height:310px;overflow:auto;display:none}.io-search-results.open{display:block}.io-search-item{display:grid;grid-template-columns:100px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid #f0f2f5;cursor:pointer}.io-search-item:last-child{border-bottom:0}.io-search-item:hover{background:#f8fbff}.io-search-code{font-weight:850;color:#1d4ed8}.io-search-name{min-width:0}.io-search-name strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.io-search-stock{text-align:right;font-size:12px;color:#475467;white-space:nowrap}
 .io-cart-wrap{max-height:430px}.io-cart-wrap table{min-width:980px}.io-cart-wrap input{border:1px solid #cbd5e1;border-radius:10px;background:#fff;outline:none}.io-cart-wrap input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12)}.io-qty-control{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}.io-step{width:38px;height:38px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#1e3a8a;font-size:20px;font-weight:900;line-height:1;cursor:pointer}.io-step:hover{background:#eff6ff;border-color:#93c5fd}.io-step:active{transform:translateY(1px)}.io-cart-wrap .io-qty{width:82px;height:42px;padding:0 8px;text-align:center;font-size:16px;font-weight:900;color:#0f172a}.io-price-box{min-width:132px}.io-price-view{display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap}.io-price-value{font-weight:850;color:#344054}.io-price-edit{height:30px;padding:0 8px;border:1px solid #d0d5dd;border-radius:8px;background:#fff;color:#1d4ed8;font-size:10.5px;font-weight:800;cursor:pointer}.io-price-edit:hover{background:#eff6ff}.io-price-editor{display:flex;align-items:center;justify-content:flex-end;gap:5px}.io-price-editor.hidden{display:none}.io-cart-wrap .io-price{width:112px;height:40px;padding:0 9px;text-align:right;font-size:14px;font-weight:850}.io-price-done{height:36px;padding:0 8px}.io-cart-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}.io-totals{display:flex;gap:8px;flex-wrap:wrap}.io-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.io-summary{border:1px solid #e4e7ec;border-radius:16px;background:#fbfcfe;padding:14px;margin:12px 0}.io-summary-row{display:flex;justify-content:space-between;gap:14px;padding:6px 0;border-bottom:1px dashed #e4e7ec}.io-summary-row:last-child{border-bottom:0}.io-preview-empty{padding:22px 10px;text-align:center;color:#667085}.io-preview-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}.io-preview-line{border:1px solid #e4e7ec;border-radius:12px;padding:10px;background:#fff}.io-preview-line .topline{display:flex;justify-content:space-between;gap:10px}.io-preview-line .move{margin-top:6px;font-weight:800}.io-preview-line.warn{border-color:#fdba74;background:#fff7ed}.io-after{display:inline-flex;min-width:42px;justify-content:center;border-radius:999px;padding:3px 8px;background:#ecfdf3;color:#166534;font-weight:850}.io-after.out{background:#fff7ed;color:#9a3412}.io-after.bad{background:#fef2f2;color:#b42318}.io-phase-note{margin-top:12px;padding:11px 12px;border:1px dashed #93c5fd;border-radius:12px;background:#eff6ff;color:#1e3a8a;font-size:12px;line-height:1.5}.io-commit-disabled{width:100%;margin-top:10px;height:44px}.io-commit-disabled:disabled{border:0;background:#e4e7ec!important;color:#98a2b3!important;cursor:not-allowed}.io-success{border:1px solid #86efac;background:#ecfdf3;border-radius:14px;padding:14px;margin-top:10px}.io-success h3{margin:0 0 6px;color:#166534}.io-success-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.io-summary{border:1px solid #e4e7ec;border-radius:16px;background:#fbfcfe;padding:14px;margin:12px 0}.io-summary-row{display:flex;justify-content:space-between;gap:14px;padding:6px 0;border-bottom:1px dashed #e4e7ec}.io-summary-row:last-child{border-bottom:0}.io-preview-empty{padding:22px 10px;text-align:center;color:#667085}.io-preview-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}.io-preview-line{border:1px solid #e4e7ec;border-radius:12px;padding:10px;background:#fff}.io-preview-line .topline{display:flex;justify-content:space-between;gap:10px}.io-preview-line .move{margin-top:6px;font-weight:800}.io-preview-line.warn{border-color:#fdba74;background:#fff7ed}.io-after{display:inline-flex;min-width:42px;justify-content:center;border-radius:999px;padding:3px 8px;background:#ecfdf3;color:#166534;font-weight:850}.io-after.out{background:#fff7ed;color:#9a3412}.io-after.bad{background:#fef2f2;color:#b42318}.io-phase-note{margin-top:12px;padding:11px 12px;border:1px dashed #93c5fd;border-radius:12px;background:#eff6ff;color:#1e3a8a;font-size:12px;line-height:1.5}.io-commit-disabled{width:100%;margin-top:10px;height:44px}.io-commit-disabled:disabled{border:0;background:#e4e7ec!important;color:#98a2b3!important;cursor:not-allowed}.io-success{border:1px solid #86efac;background:#ecfdf3;border-radius:14px;padding:14px;margin-top:10px}.io-success h3{margin:0 0 6px;color:#166534}.io-success-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.io-confirm-modal{width:min(680px,96vw);padding:0;overflow:hidden}.io-confirm-head{padding:20px 22px 16px;background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;display:flex;align-items:flex-start;gap:13px}.io-confirm-icon{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.14);display:grid;place-items:center;font-size:22px;flex:0 0 auto}.io-confirm-head h2{margin:0 0 4px;font-size:21px}.io-confirm-head p{margin:0;color:#dbeafe;font-size:12px;line-height:1.45}.io-confirm-body{padding:18px 22px 6px}.io-confirm-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:14px}.io-confirm-card{border:1px solid #e4e7ec;border-radius:12px;padding:10px 12px;background:#f8fafc}.io-confirm-card span{display:block;font-size:10.5px;color:#667085;font-weight:750;margin-bottom:3px}.io-confirm-card strong{font-size:13.5px;color:#101828}.io-confirm-lines{border:1px solid #e4e7ec;border-radius:14px;overflow:hidden;max-height:290px;overflow-y:auto}.io-confirm-line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:11px 13px;border-bottom:1px solid #eef2f6;background:#fff}.io-confirm-line:last-child{border-bottom:0}.io-confirm-line strong{font-size:12.5px}.io-confirm-name{font-size:11.5px;color:#475467;margin-top:2px}.io-confirm-move{text-align:right;font-size:11.5px;color:#475467;white-space:nowrap}.io-confirm-move b{display:block;font-size:13px;color:#101828;margin-bottom:2px}.io-confirm-warning{display:flex;gap:9px;align-items:flex-start;margin-top:13px;padding:11px 12px;border:1px solid #fed7aa;border-radius:12px;background:#fff7ed;color:#9a3412;font-size:11.5px;line-height:1.45}.io-confirm-actions{display:flex;gap:9px;justify-content:flex-end;padding:16px 22px 20px}.io-confirm-actions .action{min-width:120px;height:42px}.io-confirm-actions .danger-confirm{background:#1d4ed8;color:#fff;border-color:#1d4ed8}.io-confirm-actions .danger-confirm.out{background:#c2410c;border-color:#c2410c}.io-confirm-badge{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:10px;font-weight:900;margin-left:7px;background:#dcfce7;color:#166534}.io-confirm-badge.out{background:#ffedd5;color:#9a3412}@media(max-width:620px){.io-confirm-summary{grid-template-columns:1fr}.io-confirm-line{grid-template-columns:1fr}.io-confirm-move{text-align:left}.io-confirm-actions{flex-direction:column-reverse}.io-confirm-actions .action{width:100%}}
 @media(max-width:1200px){.io-layout{grid-template-columns:1fr}.io-preview-side{position:static}}
 @media(max-width:700px){.io-form{grid-template-columns:1fr}.io-form .full{grid-column:auto}.io-search-item{grid-template-columns:78px minmax(0,1fr)}.io-search-stock{grid-column:2;text-align:left}.io-actions{width:100%}.io-actions .action{flex:1}.io-mode{flex:1}}
 
@@ -600,10 +600,31 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="modal-back" id="mapBack"><div class="modal"><h2>Gán mã chuẩn Kho 58</h2><div class="note" id="mapLabel">--</div><div class="field" style="margin-top:12px"><label>Mã chuẩn</label><input id="mapInput" placeholder="TD-0001"></div><div class="note" style="margin-top:7px">Để trống rồi Lưu để bỏ mapping hiện tại. App sẽ kiểm tra mã có tồn tại trong Kho 58 trước khi ghi.</div><div class="modal-actions"><button class="action" id="mapCancel">Hủy</button><button class="action primary" id="mapSave">Lưu mapping</button></div></div></div>
 
 
+<div class="modal-back" id="ioConfirmBack" role="dialog" aria-modal="true" aria-labelledby="ioConfirmTitle">
+  <div class="modal io-confirm-modal">
+    <div class="io-confirm-head">
+      <div class="io-confirm-icon">📦</div>
+      <div>
+        <h2 id="ioConfirmTitle">Xác nhận ghi kho <span class="io-confirm-badge" id="ioConfirmBadge">NHẬP</span></h2>
+        <p>Kiểm tra lần cuối trước khi tạo chứng từ và cập nhật tồn kho.</p>
+      </div>
+    </div>
+    <div class="io-confirm-body">
+      <div class="io-confirm-summary" id="ioConfirmSummary"></div>
+      <div class="io-confirm-lines" id="ioConfirmLines"></div>
+      <div class="io-confirm-warning"><span>🛡️</span><div><strong>Đây là thao tác ghi sổ thật.</strong><br>Backend sẽ fresh-read tồn lần cuối trong ScriptLock. Nếu tồn đã thay đổi, hệ thống sẽ tự chặn và không ghi phiếu.</div></div>
+    </div>
+    <div class="io-confirm-actions">
+      <button class="action" id="ioConfirmCancel" type="button">Quay lại</button>
+      <button class="action danger-confirm" id="ioConfirmSubmit" type="button">✓ Xác nhận ghi kho</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.12.3";
+let APP_VERSION="V10.12.4";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
@@ -949,20 +970,48 @@ function ioPreview(){
     btn.disabled=false;btn.textContent="Xem trước phiếu";ioServerPreview=null;commit.disabled=true;status.className="badge warn";status.textContent="Lỗi kiểm tra";body.innerHTML='<div class="list-item warn"><strong>Không tạo được preview:</strong><br>'+esc(errMsg(e))+'</div>';
   }).prepareManualInventoryPreview(payload);
 }
-function ioExecutePreview(){
+function ioCloseCommitModal(){
+  var back=$("ioConfirmBack");if(back)back.classList.remove("open")
+}
+function ioOpenCommitModal(){
   if(!ioServerPreview||!ioServerPreview.previewId)return toast("Hãy Xem trước phiếu lại trước khi ghi.");
-  var slip=(ioServerPreview.slips||[])[0]||{},summary=(ioDraft.mode==="IN"?"NHẬP":"XUẤT")+" "+fmt(ioServerPreview.totalQty||0)+" · Kho "+ioDraft.warehouse;
-  if(!window.confirm("XÁC NHẬN GHI KHO\n\n"+summary+"\n"+ioDraft.counterparty+"\n\nBackend sẽ fresh-read tồn lần cuối. Tiếp tục?"))return;
-  var b=$("ioCommitBtn"),status=$("ioPreviewStatus");b.disabled=true;b.textContent="Đang ghi sổ...";status.className="badge info";status.textContent="Đang ghi";
+  var slip=(ioServerPreview.slips||[])[0]||{},lines=slip.lines||[],badge=$("ioConfirmBadge"),submit=$("ioConfirmSubmit");
+  badge.textContent=ioDraft.mode==="IN"?"NHẬP":"XUẤT";badge.className="io-confirm-badge"+(ioDraft.mode==="OUT"?" out":"");
+  submit.className="action danger-confirm"+(ioDraft.mode==="OUT"?" out":"");
+  submit.textContent=ioDraft.mode==="IN"?"✓ Xác nhận nhập kho":"✓ Xác nhận xuất kho";
+  var totalValue=ioDraft.lines.reduce(function(sum,r){return sum+Number(r.qty||0)*Number(r.price||0)},0);
+  $("ioConfirmSummary").innerHTML=
+    '<div class="io-confirm-card"><span>LOẠI PHIẾU</span><strong>'+(ioDraft.mode==="IN"?"PHIẾU NHẬP KHO":"PHIẾU XUẤT KHO")+'</strong></div>'+
+    '<div class="io-confirm-card"><span>KHO / NGÀY</span><strong>Kho '+esc(ioDraft.warehouse)+' · '+esc(ioServerPreview.transactionDateDisplay||isoToVi(ioDraft.date))+'</strong></div>'+
+    '<div class="io-confirm-card"><span>'+(ioDraft.mode==="IN"?"NHÀ CUNG CẤP":"ĐỐI TƯỢNG NHẬN")+'</span><strong>'+esc(ioDraft.counterparty||"—")+'</strong></div>'+
+    '<div class="io-confirm-card"><span>NGƯỜI THỰC HIỆN</span><strong>'+esc(ioDraft.person||"—")+'</strong></div>'+
+    '<div class="io-confirm-card"><span>TỔNG PHIẾU</span><strong>'+fmt(ioServerPreview.lineCount||lines.length)+' dòng · SL '+fmt(ioServerPreview.totalQty||0)+'</strong></div>'+
+    '<div class="io-confirm-card"><span>GIÁ TRỊ THAM KHẢO</span><strong>'+money(totalValue)+'</strong></div>';
+  $("ioConfirmLines").innerHTML=lines.map(function(r){
+    return '<div class="io-confirm-line"><div><strong>'+esc(r.code)+' · SL '+fmt(r.qty)+'</strong><div class="io-confirm-name">'+esc(r.name)+'</div></div><div class="io-confirm-move"><b>'+fmt(r.before)+' → '+fmt(r.after)+'</b>Tồn live → sau ghi</div></div>'
+  }).join("");
+  $("ioConfirmBack").classList.add("open");
+  requestAnimationFrame(function(){submit.focus()})
+}
+function ioExecutePreview(){
+  ioOpenCommitModal()
+}
+function ioCommitConfirmed(){
+  if(!ioServerPreview||!ioServerPreview.previewId){ioCloseCommitModal();return toast("Preview đã hết hiệu lực. Hãy Xem trước phiếu lại.")}
+  var previewId=ioServerPreview.previewId,b=$("ioCommitBtn"),status=$("ioPreviewStatus"),submit=$("ioConfirmSubmit"),cancel=$("ioConfirmCancel");
+  submit.disabled=true;cancel.disabled=true;submit.textContent="Đang ghi sổ...";
+  b.disabled=true;b.textContent="Đang ghi sổ...";status.className="badge info";status.textContent="Đang ghi";
   google.script.run.withSuccessHandler(function(res){
+    ioCloseCommitModal();submit.disabled=false;cancel.disabled=false;
     b.disabled=true;b.textContent="✓ Đã ghi kho";status.className="badge ok";status.textContent="Đã ghi";
     var vouchers=(res.vouchers||[]).map(function(v){return v.voucher||v.transferId||""}).filter(Boolean),voucher=vouchers[0]||res.voucher||"";
     $("ioPreviewBody").innerHTML='<div class="io-success"><h3>✅ ĐÃ GHI PHIẾU</h3><div><strong>'+esc(voucher||"Đã tạo chứng từ")+'</strong></div><div class="note" style="margin-top:6px">Kho '+esc(ioDraft.warehouse)+' · '+fmt(res.lineCount||0)+' dòng · Tổng SL '+fmt(res.totalQty||0)+' · hậu kiểm đạt</div><div class="io-success-actions"><button class="mini primary" type="button" data-io-new>＋ Phiếu mới</button><button class="mini" type="button" data-io-journal>Xem Nhật ký</button></div></div>';
     try{localStorage.removeItem(IO_DRAFT_KEY)}catch(e){}
     ioServerPreview=null;ioDraft.lines=[];$("ioDraftState").textContent="Đã ghi · "+(voucher||"OK");refreshAfterDataChange("Phiếu nhập/xuất vừa được ghi");
   }).withFailureHandler(function(e){
+    ioCloseCommitModal();submit.disabled=false;cancel.disabled=false;
     b.disabled=false;b.textContent="Xác nhận & ghi kho";status.className="badge warn";status.textContent="Ghi bị chặn";$("ioPreviewBody").insertAdjacentHTML("afterbegin",'<div class="list-item warn"><strong>⚠ CHƯA GHI KHO</strong><br>'+esc(errMsg(e))+'</div>');ioServerPreview=null;
-  }).executeManualInventoryPreview({previewId:ioServerPreview.previewId});
+  }).executeManualInventoryPreview({previewId:previewId});
 }
 
 function bindIoModule(){
@@ -980,7 +1029,7 @@ function bindIoModule(){
   });
   $("ioWarehouse").addEventListener("change",function(){ioDraft.warehouse=$("ioWarehouse").value;ioRenderCart();ioSearchItems();ioMarkChanged()});
   ["ioDate","ioCounterparty","ioPerson","ioReason","ioNote"].forEach(function(id){$(id).addEventListener("input",ioMarkChanged)});
-  $("ioSaveDraft").onclick=ioSaveDraft;$("ioClearDraft").onclick=ioClearDraft;$("ioPreviewBtn").onclick=ioPreview;$("ioCommitBtn").onclick=ioExecutePreview;
+  $("ioSaveDraft").onclick=ioSaveDraft;$("ioClearDraft").onclick=ioClearDraft;$("ioPreviewBtn").onclick=ioPreview;$("ioCommitBtn").onclick=ioExecutePreview;$("ioConfirmCancel").onclick=ioCloseCommitModal;$("ioConfirmSubmit").onclick=ioCommitConfirmed;$("ioConfirmBack").addEventListener("click",function(e){if(e.target===$("ioConfirmBack"))ioCloseCommitModal()});
 
   document.addEventListener("click",function(e){
     var add=e.target.closest("[data-io-add]");if(add){ioAddLine(add.dataset.ioAdd);return}
@@ -1015,6 +1064,7 @@ function bindIoModule(){
   });
 
   document.addEventListener("keydown",function(e){
+    if(e.key==="Escape"&&$("ioConfirmBack")&&$("ioConfirmBack").classList.contains("open")){e.preventDefault();ioCloseCommitModal();return}
     var q=e.target.closest("[data-io-qty]");
     if(q){
       if(e.key==="ArrowUp"||e.key==="ArrowDown"){
