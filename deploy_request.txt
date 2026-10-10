@@ -1,5 +1,5 @@
-Deploy requested by ChatGPT. Production deploy must pass all syntax and regression gates.
+Deploy requested after regression validation.
 Target: Apps Script production
 Source branch: dev-v10.10.6
-Version: V10.15.1 Stage 5 strict voucher correction validation
-Requested: 2026-10-10 22:25 +07
+Version: V10.15.2 Stage 5 safe DCK correction
+Requested: 2026-10-10
