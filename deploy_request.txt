@@ -1,5 +1,5 @@
-Production deploy request
-Version: V10.18.1
-Voucher A4/A5 professional Thành Đức logo + company info print layout
-Branch: dev-v10.10.6
-Run syntax checks and all regression suites before deployment.
+Production hotfix for direct voucher printing.
+Version: V10.18.1 (print hotfix, no feature rollback)
+Source branch: dev-v10.10.6
+Scope: Direct Chrome print dialog; eliminate blank print pages and unexpected scaling.
+Run full syntax and regression checks.
