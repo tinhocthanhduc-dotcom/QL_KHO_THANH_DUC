@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.15.0</title>
+<title>QL KHO THÀNH ĐỨC · V10.15.1</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -741,7 +741,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.15.0";
+let APP_VERSION="V10.15.1";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
@@ -1140,11 +1140,11 @@ function openVoucherAction(mode){
 }
 function voucherActionPayload(){
   var p={voucher:voucherDetail&&voucherDetail.voucher||"",action:voucherAction.mode,actor:$("voucherActionActor").value.trim(),counterparty:$("voucherActionCounterparty").value.trim(),reason:$("voucherActionReason").value.trim(),note:$("voucherActionNote").value.trim(),lines:[]};
-  if(voucherAction.mode==="CORRECT")p.lines=[...document.querySelectorAll("[data-vadj-qty]")].map(function(el){return {code:el.dataset.vadjQty,qty:Number(String(el.value||"").replace(/[^0-9]/g,"")||0)}});
+  if(voucherAction.mode==="CORRECT"){p.lines=[];for(const el of document.querySelectorAll("[data-vadj-qty]")){const raw=String(el.value||"").trim();if(!/^\d+$/.test(raw)||!Number.isSafeInteger(Number(raw))){toast("Số lượng sửa của "+el.dataset.vadjQty+" phải là số nguyên không âm.");el.focus();return null;}p.lines.push({code:el.dataset.vadjQty,qty:Number(raw)});}}
   return p
 }
 function previewVoucherAction(){
-  var payload=voucherActionPayload(),btn=$("voucherActionCheck"),commit=$("voucherActionCommit"),box=$("voucherActionPreview");
+  var payload=voucherActionPayload();if(!payload)return;var btn=$("voucherActionCheck"),commit=$("voucherActionCommit"),box=$("voucherActionPreview");
   if(!payload.actor)return toast("Nhập người thực hiện điều chỉnh");
   if(voucherAction.mode==="VOID"&&!payload.reason)return toast("Nhập lý do hoàn tác");
   if(voucherAction.mode==="CORRECT"&&!payload.reason)return toast("Nhập lý do phiếu mới");
