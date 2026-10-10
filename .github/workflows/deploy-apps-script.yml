@@ -58,6 +58,8 @@ jobs:
           pathlib.Path('/tmp/index_scripts.js').write_text('\n'.join(blocks), encoding='utf-8')
           subprocess.check_call(['node', '--check', '/tmp/index_scripts.js'])
           PY
+          grep -q "const APP_VERSION = 'V10.15.0';" code.js
+          grep -q 'let APP_VERSION="V10.15.0";' Index.html
 
       - name: Regression checks
         shell: bash
@@ -70,16 +72,40 @@ jobs:
           const historicalSuite = aiHistoricalVoucherSelfTestV1107_();
           const commandResolverV3 = aiCommandResolverV3SelfTest_();
           const learningSuite = aiLearningMemorySelfTestV10109_();
+          const smartSuite = aiSmartAgentSelfTestV10110_();
+          const manualSuite = manualInventorySelfTestV10122_();
+          const voucherSuite = inventoryVoucherPhase3ASelfTestV10130_();
+          const voucherAdjustSuite = voucherAdjustmentSelfTestV10131_();
+          const voucher3CSuite = voucherPhase3CSelfTestV10132_();
+          const voucherCenterSuite = voucherCenterSelfTestV10140_();
+          const voucherCenter4BSuite = voucherCenter4BSelfTestV10141_();
+          const voucherCenter4CSuite = voucherCenter4CSelfTestV10150_();
           if (!oldSuite.pass) process.exit(31);
           if (!resolverSuite.pass) process.exit(32);
           if (!historicalSuite.pass) process.exit(33);
           if (!commandResolverV3.pass) process.exit(34);
           if (!learningSuite.pass) process.exit(35);
+          if (!smartSuite.pass) { console.error(JSON.stringify(smartSuite)); process.exit(36); }
+          if (!manualSuite.pass) { console.error(JSON.stringify(manualSuite)); process.exit(37); }
+          if (!voucherSuite.pass) { console.error(JSON.stringify(voucherSuite)); process.exit(38); }
+          if (!voucherAdjustSuite.pass) { console.error(JSON.stringify(voucherAdjustSuite)); process.exit(39); }
+          if (!voucher3CSuite.pass) { console.error(JSON.stringify(voucher3CSuite)); process.exit(40); }
+          if (!voucherCenterSuite.pass) { console.error(JSON.stringify(voucherCenterSuite)); process.exit(41); }
+          if (!voucherCenter4BSuite.pass) { console.error(JSON.stringify(voucherCenter4BSuite)); process.exit(42); }
+          if (!voucherCenter4CSuite.pass) { console.error(JSON.stringify(voucherCenter4CSuite)); process.exit(43); }
           console.log('Core regression:', oldSuite.passed + '/' + oldSuite.total, 'PASS');
           console.log('Resolver V2:', resolverSuite.passed + '/' + resolverSuite.total, 'PASS');
           console.log('Historical Voucher:', historicalSuite.passed + '/' + historicalSuite.total, 'PASS');
           console.log('Command Resolver V3:', commandResolverV3.passed + '/' + commandResolverV3.total, 'PASS');
           console.log('Learning Memory:', learningSuite.passed + '/' + learningSuite.total, 'PASS');
+          console.log('Smart Agent:', smartSuite.passed + '/' + smartSuite.total, 'PASS');
+          console.log('Manual Inventory:', manualSuite.passed + '/' + manualSuite.total, 'PASS');
+          console.log('Voucher UI 3A:', voucherSuite.passed + '/' + voucherSuite.total, 'PASS');
+          console.log('Voucher 3B:', voucherAdjustSuite.passed + '/' + voucherAdjustSuite.total, 'PASS');
+          console.log('Voucher 3C:', voucher3CSuite.passed + '/' + voucher3CSuite.total, 'PASS');
+          console.log('Voucher Center 4A:', voucherCenterSuite.passed + '/' + voucherCenterSuite.total, 'PASS');
+          console.log('Voucher Center 4B:', voucherCenter4BSuite.passed + '/' + voucherCenter4BSuite.total, 'PASS');
+          console.log('Voucher Center 4C:', voucherCenter4CSuite.passed + '/' + voucherCenter4CSuite.total, 'PASS');
           JS
           node /tmp/regression_test.js
 
