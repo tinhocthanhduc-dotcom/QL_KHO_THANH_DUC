@@ -1,5 +1,5 @@
 Deploy requested by ChatGPT after user approval.
 Target: Apps Script production
 Source branch: dev-v10.10.6
-Version: V10.12.3 Nhap Xuat input UX
-Requested: 2026-10-10 20:17 +07
+Version: V10.12.4 In-app inventory confirmation modal
+Requested: 2026-10-10 20:27 +07
