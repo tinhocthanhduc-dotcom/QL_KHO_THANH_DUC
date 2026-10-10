@@ -816,6 +816,71 @@ function dateOffsetIso(days){
   const d=new Date(Date.now()+Number(days||0)*86400000),p=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(d),m=Object.fromEntries(p.map(function(v){return [v.type,v.value]}));
   return m.year+"-"+m.month+"-"+m.day
 }
+
+function monthStartIso(){
+  var t=todayIso();return t.slice(0,8)+"01"
+}
+function voucherCenterSetRange(mode){
+  var t=todayIso(),from=t;
+  if(mode==="7d")from=dateOffsetIso(-6);
+  else if(mode==="month")from=monthStartIso();
+  else if(mode==="30d")from=dateOffsetIso(-29);
+  $("vcFrom").value=from;$("vcTo").value=t;
+  document.querySelectorAll("[data-vc-range]").forEach(function(b){b.classList.toggle("active",b.dataset.vcRange===mode)});
+  voucherCenterLoaded=false;loadVoucherCenter(false)
+}
+function voucherCenterRank(rows,key){
+  var map={};
+  rows.forEach(function(r){
+    var name=String(r[key]||"").trim();if(!name)return;
+    if(!map[name])map[name]={name:name,count:0,qty:0};
+    map[name].count++;map[name].qty+=Number(r.totalQty||0)
+  });
+  return Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return b.count-a.count||b.qty-a.qty||a.name.localeCompare(b.name,"vi")}).slice(0,5)
+}
+function renderVoucherCenterAnalytics(rows){
+  var types={PXK:{count:0,qty:0},PNK:{count:0,qty:0},KK:{count:0,qty:0},DCK:{count:0,qty:0}};
+  rows.forEach(function(r){if(types[r.type]){types[r.type].count++;types[r.type].qty+=Number(r.totalQty||0)}});
+  $("vcTypeStats").innerHTML=["PNK","PXK","DCK","KK"].map(function(k){return '<div class="vc-type-stat"><span>'+k+'</span><strong>'+fmt(types[k].count)+' phiếu · SL '+fmt(types[k].qty)+'</strong></div>'}).join("");
+  var actors=voucherCenterRank(rows,"actor"),counter=voucherCenterRank(rows.filter(function(r){return r.type!=="DCK"}),"counterparty");
+  $("vcActorStats").innerHTML=actors.map(function(r,i){return '<div class="vc-rank"><span>'+(i+1)+'. '+esc(r.name)+'</span><strong>'+fmt(r.count)+' phiếu · SL '+fmt(r.qty)+'</strong></div>'}).join("")||'<div class="note">Chưa có dữ liệu.</div>';
+  $("vcCounterpartyStats").innerHTML=counter.map(function(r,i){return '<div class="vc-rank"><span>'+(i+1)+'. '+esc(r.name)+'</span><strong>'+fmt(r.count)+' phiếu · SL '+fmt(r.qty)+'</strong></div>'}).join("")||'<div class="note">Chưa có dữ liệu.</div>'
+}
+function updateVoucherCenterSelectionUi(rows){
+  rows=rows||filteredVoucherCenter();
+  var selected=Array.from(voucherCenterSelection),visible=rows.map(function(r){return r.voucher}),visibleSelected=visible.filter(function(v){return voucherCenterSelection.has(v)}).length;
+  $("vcSelected").textContent=fmt(selected.length)+" phiếu đã chọn";
+  var all=$("vcSelectAll");if(all){all.checked=visible.length>0&&visibleSelected===visible.length;all.indeterminate=visibleSelected>0&&visibleSelected<visible.length}
+  var print=$("vcPrintSelected");if(print){print.disabled=selected.length===0||selected.length>12;print.textContent=selected.length>12?"🖨 Tối đa 12 phiếu":"🖨 In phiếu đã chọn";print.title=selected.length>12?"Bỏ bớt để còn tối đa 12 phiếu":""}
+}
+function setVoucherCenterSelected(voucher,checked){
+  voucher=String(voucher||"").trim();if(!voucher)return;
+  if(checked)voucherCenterSelection.add(voucher);else voucherCenterSelection.delete(voucher);
+  updateVoucherCenterSelectionUi()
+}
+function selectAllVoucherCenter(checked){
+  filteredVoucherCenter().forEach(function(r){if(checked)voucherCenterSelection.add(r.voucher);else voucherCenterSelection.delete(r.voucher)});
+  renderVoucherCenter()
+}
+function exportVoucherCenterCsv(){
+  var rows=filteredVoucherCenter();if(!rows.length)return toast("Không có phiếu để xuất");
+  var data=[["Ngày","Số phiếu","Loại","Kho/Hướng","Đối tượng","Người thực hiện","Lý do","Số dòng","Tổng SL","Trạng thái","Phiếu gốc","Phiếu liên quan"]];
+  rows.forEach(function(r){data.push([r.date,r.voucher,r.type,r.warehouseLabel,r.counterparty,r.actor,r.reason,r.totalLines,r.totalQty,voucherCenterStatusLabel(r.status),r.parentVoucher||"", (r.relatedVouchers||[]).join(" | ")])});
+  var csv="\ufeff"+data.map(function(row){return row.map(function(v){return '"'+String(v==null?"":v).replace(/"/g,'""')+'"'}).join(",")}).join("\r\n");
+  var blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="QL_KHO_PHIEU_"+($("vcFrom").value||"")+"_"+($("vcTo").value||"")+".csv";a.click();URL.revokeObjectURL(a.href)
+}
+function printSelectedVouchers(){
+  var vouchers=Array.from(voucherCenterSelection);if(!vouchers.length)return toast("Chưa chọn phiếu");
+  if(vouchers.length>12)return toast("Mỗi lần in tối đa 12 phiếu");
+  var b=$("vcPrintSelected");b.disabled=true;b.textContent="Đang chuẩn bị in...";
+  google.script.run.withSuccessHandler(function(data){
+    b.disabled=false;updateVoucherCenterSelectionUi();
+    var details=data.details||[];if(!details.length)return toast("Không tải được phiếu đã chọn");
+    $("voucherPrintArea").innerHTML=details.map(function(d){return '<section class="voucher-batch-page">'+buildVoucherPrintHtml(d)+'</section>'}).join("");
+    if((data.errors||[]).length)toast("Có "+fmt(data.errors.length)+" phiếu không tải được; sẽ in các phiếu còn lại");
+    window.print()
+  }).withFailureHandler(function(e){b.disabled=false;updateVoucherCenterSelectionUi();toast("Không chuẩn bị được bản in: "+errMsg(e))}).getInventoryVoucherDetailsBulk({vouchers:vouchers})
+}
 function voucherCenterStatusLabel(s){
   s=String(s||"POSTED").toUpperCase();
   return s==="VOIDED"?"ĐÃ HOÀN TÁC":s==="CORRECTED"?"ĐÃ SỬA":"ĐÃ GHI"
@@ -842,20 +907,21 @@ function renderVoucherCenter(){
     if(r.parentVoucher)related.push('<button class="vc-relation vc-parent" type="button" data-voucher-open="'+esc(r.parentVoucher)+'">Gốc: '+esc(r.parentVoucher)+'</button>');
     (r.relatedVouchers||[]).slice(0,3).forEach(function(v){related.push('<button class="vc-relation" type="button" data-voucher-open="'+esc(v)+'">'+esc(v)+'</button>')});
     if((r.relatedVouchers||[]).length>3)related.push('<span class="note">+'+fmt(r.relatedVouchers.length-3)+'</span>');
-    return '<tr data-voucher="'+esc(r.voucher)+'"><td>'+esc(r.date||"—")+'</td><td><button class="voucher-link" type="button" data-voucher-open="'+esc(r.voucher)+'">'+esc(r.voucher)+'</button></td><td><span class="vc-type '+String(r.type||"").toLowerCase()+'">'+esc(r.type||"—")+'</span></td><td>'+esc(r.warehouseLabel||"—")+'</td><td>'+esc(r.counterparty||"—")+'</td><td>'+esc(r.actor||"—")+'</td><td>'+esc(r.reason||"—")+'</td><td class="num">'+fmt(r.totalLines||0)+'</td><td class="num"><strong>'+fmt(r.totalQty||0)+'</strong></td><td>'+voucherCenterStatusHtml(r.status)+'</td><td><div class="vc-relations">'+(related.join("")||'<span class="note">—</span>')+'</div></td><td><button class="mini" type="button" data-voucher-open="'+esc(r.voucher)+'">Xem</button></td></tr>'
-  }).join("")||'<tr><td colspan="12" class="empty">Không có phiếu phù hợp bộ lọc.</td></tr>';
+    var checked=voucherCenterSelection.has(r.voucher)?" checked":"";
+    return '<tr data-voucher="'+esc(r.voucher)+'"><td><input class="vc-row-check" type="checkbox" data-vc-select="'+esc(r.voucher)+'"'+checked+' aria-label="Chọn '+esc(r.voucher)+'"></td><td>'+esc(r.date||"—")+'</td><td><button class="voucher-link" type="button" data-voucher-open="'+esc(r.voucher)+'">'+esc(r.voucher)+'</button></td><td><span class="vc-type '+String(r.type||"").toLowerCase()+'">'+esc(r.type||"—")+'</span></td><td>'+esc(r.warehouseLabel||"—")+'</td><td>'+esc(r.counterparty||"—")+'</td><td>'+esc(r.actor||"—")+'</td><td>'+esc(r.reason||"—")+'</td><td class="num">'+fmt(r.totalLines||0)+'</td><td class="num"><strong>'+fmt(r.totalQty||0)+'</strong></td><td>'+voucherCenterStatusHtml(r.status)+'</td><td><div class="vc-relations">'+(related.join("")||'<span class="note">—</span>')+'</div></td><td><button class="mini" type="button" data-voucher-open="'+esc(r.voucher)+'">Xem</button></td></tr>'
+  }).join("")||'<tr><td colspan="13" class="empty">Không có phiếu phù hợp bộ lọc.</td></tr>';
   $("vcFoot").textContent="Đang hiển thị "+fmt(rows.length)+"/"+fmt((state.voucherCenter||[]).length)+" phiếu trong khoảng ngày đã tải.";
-  applyMobileTableLabels($("voucherCenterTable"))
+  renderVoucherCenterAnalytics(rows);updateVoucherCenterSelectionUi(rows);applyMobileTableLabels($("voucherCenterTable"))
 }
 function loadVoucherCenter(showToast){
   showToast=!!showToast;
-  var from=$("vcFrom").value||dateOffsetIso(-30),to=$("vcTo").value||todayIso(),tbody=$("voucherCenterTable").querySelector("tbody");
+  var from=$("vcFrom").value||dateOffsetIso(-29),to=$("vcTo").value||todayIso(),tbody=$("voucherCenterTable").querySelector("tbody");
   $("vcLoadedAt").textContent="Đang tải...";
-  tbody.innerHTML='<tr><td colspan="12" class="empty">Đang tổng hợp PXK / PNK / KK / DCK...</td></tr>';
+  tbody.innerHTML='<tr><td colspan="13" class="empty">Đang tổng hợp PXK / PNK / KK / DCK...</td></tr>';
   google.script.run.withSuccessHandler(function(data){
-    state.voucherCenter=data.rows||[];voucherCenterLoaded=true;$("vcLoadedAt").textContent="Cập nhật: "+(data.loadedAt||"--");renderVoucherCenter();if(showToast)toast("Đã tải Trung tâm phiếu")
+    state.voucherCenter=data.rows||[];voucherCenterSelection.clear();voucherCenterLoaded=true;$("vcLoadedAt").textContent="Cập nhật: "+(data.loadedAt||"--");renderVoucherCenter();if(showToast)toast("Đã tải Trung tâm phiếu")
   }).withFailureHandler(function(e){
-    voucherCenterLoaded=false;$("vcLoadedAt").textContent="Lỗi";tbody.innerHTML='<tr><td colspan="12" class="empty">'+esc(errMsg(e))+'</td></tr>'
+    voucherCenterLoaded=false;$("vcLoadedAt").textContent="Lỗi";tbody.innerHTML='<tr><td colspan="13" class="empty">'+esc(errMsg(e))+'</td></tr>'
   }).getVoucherCenter({fromDate:from,toDate:to,limit:1000})
 }
 
