@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.14.2</title>
+<title>QL KHO THÀNH ĐỨC · V10.15.0</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -360,6 +360,27 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
   #panel-ai .ai-execution-body{min-height:260px!important}
 }
 
+/* V10.15.0 · Voucher Center 4C */
+.voucher-center-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+.voucher-center-kpi.alert strong{color:#b42318}
+.voucher-center-controls{grid-template-columns:minmax(280px,2fr) repeat(6,minmax(132px,1fr))}
+.vc-alert{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;white-space:nowrap}
+.vc-alert.high{background:#fee2e2;color:#b42318}.vc-alert.medium{background:#fff7ed;color:#b45309}.vc-alert.none{background:#f2f4f7;color:#667085}
+.vc-report{margin-top:12px;border:1px solid #dbe3ef;border-radius:16px;background:#fbfcfe;padding:14px}
+.vc-report-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.vc-report-head h3{margin:0;font-size:14px}.vc-report-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.vc-report-tools select{height:38px;border:1px solid #d0d5dd;border-radius:10px;background:#fff;padding:0 10px}
+.vc-flow-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.vc-flow-kpi{border:1px solid #e4e7ec;border-radius:12px;background:#fff;padding:10px 12px}.vc-flow-kpi span{display:block;font-size:9.5px;color:#667085;font-weight:850}.vc-flow-kpi strong{display:block;font-size:19px;margin-top:3px}
+.vc-report-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.85fr);gap:10px}
+.vc-report-table{max-height:350px}.vc-report-table table{min-width:760px}
+.vc-anomaly-list{display:flex;flex-direction:column;gap:7px;max-height:350px;overflow:auto}
+.vc-anomaly-item{border:1px solid #fed7aa;border-radius:11px;background:#fff7ed;padding:9px 10px;font-size:10.5px}
+.vc-anomaly-item.high{border-color:#fecaca;background:#fef2f2}.vc-anomaly-item button{border:0;background:transparent;color:#1d4ed8;font-weight:850;padding:0;cursor:pointer}
+.vc-anomaly-item strong{display:block;margin:3px 0}.vc-anomaly-item small{color:#667085}
+@media(max-width:1200px){.voucher-center-controls{grid-template-columns:repeat(3,minmax(0,1fr))}.voucher-center-controls input{grid-column:1/-1}.vc-report-grid{grid-template-columns:1fr}}
+@media(max-width:800px){.voucher-center-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.vc-flow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.voucher-center-controls{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.voucher-center-kpis,.vc-flow-kpis,.voucher-center-controls{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -578,13 +599,17 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
         <div class="voucher-center-kpi posted"><span>ĐÃ GHI</span><strong id="vcKpiPosted">0</strong></div>
         <div class="voucher-center-kpi corrected"><span>ĐÃ SỬA</span><strong id="vcKpiCorrected">0</strong></div>
         <div class="voucher-center-kpi voided"><span>ĐÃ HOÀN TÁC</span><strong id="vcKpiVoided">0</strong></div>
+        <div class="voucher-center-kpi alert"><span>CẦN KIỂM TRA</span><strong id="vcKpiAnomaly">0</strong></div>
       </div>
       <div class="vc-quickbar"><span>Xem nhanh:</span><button class="vc-quick active" type="button" data-vc-range="today">Hôm nay</button><button class="vc-quick" type="button" data-vc-range="7d">7 ngày</button><button class="vc-quick" type="button" data-vc-range="month">Tháng này</button><button class="vc-quick" type="button" data-vc-range="30d">30 ngày</button></div>
       <div class="voucher-center-controls">
-        <input id="vcSearch" placeholder="Tìm số phiếu, mã hàng, tên hàng, đối tượng, người thực hiện...">
+        <input id="vcSearch" placeholder="Tìm số phiếu, mã hàng, tên hàng, lý do...">
         <select id="vcType"><option value="">Tất cả loại</option><option value="PXK">PXK · Xuất kho</option><option value="PNK">PNK · Nhập kho</option><option value="KK">KK · Kiểm kho</option><option value="DCK">DCK · Điều chuyển</option></select>
         <select id="vcWarehouse"><option value="all">Tất cả kho</option><option value="58">Kho 58</option><option value="145">Kho 145</option></select>
         <select id="vcStatus"><option value="">Tất cả trạng thái</option><option value="POSTED">Đã ghi</option><option value="CORRECTED">Đã sửa</option><option value="VOIDED">Đã hoàn tác</option></select>
+        <select id="vcActor"><option value="">Tất cả người thực hiện</option></select>
+        <select id="vcCounterparty"><option value="">Tất cả đối tượng</option></select>
+        <select id="vcAnomaly"><option value="">Tất cả kiểm soát</option><option value="FLAGGED">Có cảnh báo</option><option value="HIGH">Mức cao</option><option value="MISSING">Thiếu thông tin</option></select>
       </div>
       <div class="vc-datebar">
         <div class="vc-date-mode"><button class="vc-mode active" type="button" data-vc-date-mode="day">Cùng ngày</button><button class="vc-mode" type="button" data-vc-date-mode="range">Khoảng ngày</button></div>
@@ -592,11 +617,19 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
         <label class="date-box vc-date-hidden" id="vcToWrap"><span>Đến ngày</span><input type="date" id="vcTo"></label>
         <div class="vc-date-actions"><button class="action" id="vcClear">Xóa lọc</button><button class="action primary" id="vcRefresh">Tải lại</button></div>
       </div>
-      <div class="vc-batchbar"><div class="vc-batch-left"><label class="vc-check"><input type="checkbox" id="vcSelectAll"> Chọn tất cả đang lọc</label><span class="vc-selected" id="vcSelected">0 phiếu đã chọn</span></div><div class="vc-batch-actions"><button class="action" id="vcExport" type="button">⬇ Xuất CSV</button><button class="action primary" id="vcPrintSelected" type="button" disabled>🖨 In phiếu đã chọn</button></div></div>
+      <div class="vc-batchbar"><div class="vc-batch-left"><label class="vc-check"><input type="checkbox" id="vcSelectAll"> Chọn tất cả đang lọc</label><span class="vc-selected" id="vcSelected">0 phiếu đã chọn</span></div><div class="vc-batch-actions"><button class="action" id="vcExport" type="button">⬇ CSV chi tiết</button><button class="action" id="vcExportReport" type="button">📊 CSV quản trị</button><button class="action primary" id="vcPrintSelected" type="button" disabled>🖨 In phiếu đã chọn</button></div></div>
       <div class="table-wrap voucher-center-table">
-        <table id="voucherCenterTable"><thead><tr><th style="width:34px"></th><th>Ngày</th><th>Số phiếu</th><th>Loại</th><th>Kho / Hướng</th><th>Đối tượng</th><th>Người thực hiện</th><th>Lý do</th><th class="num">Dòng</th><th class="num">Tổng SL</th><th>Trạng thái</th><th>Liên quan</th><th></th></tr></thead><tbody><tr><td colspan="13" class="empty">Mở tab Phiếu để tải dữ liệu.</td></tr></tbody></table>
+        <table id="voucherCenterTable"><thead><tr><th style="width:34px"></th><th>Ngày</th><th>Số phiếu</th><th>Loại</th><th>Kho / Hướng</th><th>Đối tượng</th><th>Người thực hiện</th><th>Lý do</th><th class="num">Dòng</th><th class="num">Tổng SL</th><th>Kiểm soát</th><th>Trạng thái</th><th>Liên quan</th><th></th></tr></thead><tbody><tr><td colspan="14" class="empty">Mở tab Phiếu để tải dữ liệu.</td></tr></tbody></table>
       </div>
-      <div class="vc-analytics"><div class="vc-analytics-card"><h3>📊 Khối lượng theo loại phiếu</h3><div class="vc-type-grid" id="vcTypeStats"></div></div><div class="vc-analytics-card"><h3>👤 Người thực hiện nhiều nhất</h3><div class="vc-rank-list" id="vcActorStats"></div></div><div class="vc-analytics-card"><h3>🏢 Đối tượng phát sinh nhiều nhất</h3><div class="vc-rank-list" id="vcCounterpartyStats"></div></div></div>
+      <div class="vc-analytics"><div class="vc-analytics-card"><h3>📊 Khối lượng theo loại phiếu</h3><div class="vc-type-grid" id="vcTypeStats"></div></div><div class="vc-analytics-card"><h3>👤 Người thực hiện nhiều nhất</h3><div class="vc-rank-list" id="vcActorStats"></div></div><div class="vc-analytics-card"><h3>🏢 Đối tượng phát sinh nhiều nhất</h3><div class="vc-rank-list" id="vcCounterpartyStats"></div></div><div class="vc-analytics-card"><h3>📦 Mã xuất nhiều nhất</h3><div class="vc-rank-list" id="vcSkuStats"></div></div></div>
+      <div class="vc-report">
+        <div class="vc-report-head"><div><h3>📈 Báo cáo nhập · xuất & kiểm soát</h3><div class="note">Tổng hợp theo dữ liệu phiếu đang lọc. DCK được thống kê riêng, không cộng vào SL nhập/xuất.</div></div><div class="vc-report-tools"><label class="note">Nhóm theo</label><select id="vcGroupMode"><option value="day">Ngày</option><option value="week">Tuần</option><option value="month">Tháng</option></select></div></div>
+        <div class="vc-flow-kpis" id="vcFlowKpis"></div>
+        <div class="vc-report-grid">
+          <div class="table-wrap vc-report-table"><table id="vcReportTable"><thead><tr><th>Kỳ</th><th>Kho</th><th class="num">SL nhập</th><th class="num">SL xuất</th><th class="num">PNK</th><th class="num">PXK</th><th class="num">DCK</th><th class="num">KK</th></tr></thead><tbody><tr><td colspan="8" class="empty">Chưa có dữ liệu.</td></tr></tbody></table></div>
+          <div class="vc-analytics-card"><h3>⚠ Phiếu cần kiểm tra</h3><div class="vc-anomaly-list" id="vcAnomalyList"></div></div>
+        </div>
+      </div>
       <div class="voucher-center-foot"><div class="note" id="vcFoot">Mặc định chỉ hiển thị các phiếu cùng ngày.</div><div class="note">Chứng từ gốc không bị xóa; trạng thái sửa/hoàn tác được suy ra từ chuỗi bút toán liên quan.</div></div>
     </div>
   </section>
@@ -708,7 +741,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.14.2";
+let APP_VERSION="V10.15.0";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
@@ -853,9 +886,10 @@ function renderVoucherCenterAnalytics(rows){
   var types={PXK:{count:0,qty:0},PNK:{count:0,qty:0},KK:{count:0,qty:0},DCK:{count:0,qty:0}};
   rows.forEach(function(r){if(types[r.type]){types[r.type].count++;types[r.type].qty+=Number(r.totalQty||0)}});
   $("vcTypeStats").innerHTML=["PNK","PXK","DCK","KK"].map(function(k){return '<div class="vc-type-stat"><span>'+k+'</span><strong>'+fmt(types[k].count)+' phiếu · SL '+fmt(types[k].qty)+'</strong></div>'}).join("");
-  var actors=voucherCenterRank(rows,"actor"),counter=voucherCenterRank(rows.filter(function(r){return r.type!=="DCK"}),"counterparty");
+  var actors=voucherCenterRank(rows,"actor"),counter=voucherCenterRank(rows.filter(function(r){return r.type!=="DCK"}),"counterparty"),sku=voucherCenterTopSku(rows,5);
   $("vcActorStats").innerHTML=actors.map(function(r,i){return '<div class="vc-rank"><span>'+(i+1)+'. '+esc(r.name)+'</span><strong>'+fmt(r.count)+' phiếu · SL '+fmt(r.qty)+'</strong></div>'}).join("")||'<div class="note">Chưa có dữ liệu.</div>';
-  $("vcCounterpartyStats").innerHTML=counter.map(function(r,i){return '<div class="vc-rank"><span>'+(i+1)+'. '+esc(r.name)+'</span><strong>'+fmt(r.count)+' phiếu · SL '+fmt(r.qty)+'</strong></div>'}).join("")||'<div class="note">Chưa có dữ liệu.</div>'
+  $("vcCounterpartyStats").innerHTML=counter.map(function(r,i){return '<div class="vc-rank"><span>'+(i+1)+'. '+esc(r.name)+'</span><strong>'+fmt(r.count)+' phiếu · SL '+fmt(r.qty)+'</strong></div>'}).join("")||'<div class="note">Chưa có dữ liệu.</div>';
+  $("vcSkuStats").innerHTML=sku.map(function(r,i){return '<div class="vc-rank"><span>'+(i+1)+'. '+esc(r.code)+' · '+esc(r.name||"")+'</span><strong>SL '+fmt(r.qty)+'</strong></div>'}).join("")||'<div class="note">Chưa có PXK trong bộ lọc.</div>'
 }
 function updateVoucherCenterSelectionUi(rows){
   rows=rows||filteredVoucherCenter();
@@ -872,6 +906,89 @@ function setVoucherCenterSelected(voucher,checked){
 function selectAllVoucherCenter(checked){
   filteredVoucherCenter().forEach(function(r){if(checked)voucherCenterSelection.add(r.voucher);else voucherCenterSelection.delete(r.voucher)});
   renderVoucherCenter()
+}
+function voucherCenterSetSelectOptions(id,rows,key,label){
+  var sel=$(id);if(!sel)return;var current=sel.value||"",map={};
+  (rows||[]).forEach(function(r){var v=String(r[key]||"").trim();if(v)map[v]=1});
+  var values=Object.keys(map).sort(function(a,b){return a.localeCompare(b,"vi")});
+  sel.innerHTML='<option value="">'+esc(label)+'</option>'+values.map(function(v){return '<option value="'+esc(v)+'">'+esc(v)+'</option>'}).join("");
+  if(values.indexOf(current)>=0)sel.value=current
+}
+function voucherCenterRefreshFilterOptions(){
+  var rows=state.voucherCenter||[];
+  voucherCenterSetSelectOptions("vcActor",rows,"actor","Tất cả người thực hiện");
+  voucherCenterSetSelectOptions("vcCounterparty",rows,"counterparty","Tất cả đối tượng")
+}
+function voucherCenterAnomalyHtml(r){
+  var a=r.anomalies||[];if(!a.length)return '<span class="vc-alert none">—</span>';
+  var high=a.some(function(x){return x.severity==="HIGH"}),title=a.map(function(x){return x.label+": "+x.detail}).join(" | ");
+  return '<span class="vc-alert '+(high?"high":"medium")+'" title="'+esc(title)+'">⚠ '+fmt(a.length)+(high?" · Cao":"")+'</span>'
+}
+function voucherCenterTopSku(rows,limit){
+  var map={};(rows||[]).filter(function(r){return r.type==="PXK"}).forEach(function(r){
+    (r.lineItems||[]).forEach(function(x){var code=String(x.code||"").trim(),name=String(x.name||"").trim();if(!code)return;if(!map[code])map[code]={code:code,name:name,qty:0,count:0};map[code].qty+=Number(x.qty||0);map[code].count++})
+  });
+  return Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return b.qty-a.qty||b.count-a.count||a.code.localeCompare(b.code)}).slice(0,limit||5)
+}
+function voucherCenterRankAll(rows,key){
+  var map={};(rows||[]).forEach(function(r){var name=String(r[key]||"").trim();if(!name)return;if(!map[name])map[name]={name:name,count:0,qty:0};map[name].count++;map[name].qty+=Number(r.totalQty||0)});
+  return Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return b.count-a.count||b.qty-a.qty||a.name.localeCompare(b.name,"vi")})
+}
+function voucherCenterIsoWeek(dateKey){
+  var m=String(dateKey||"").match(/^(\d{4})(\d{2})(\d{2})$/);if(!m)return {key:String(dateKey||""),label:String(dateKey||"—")};
+  var d=new Date(Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]))),day=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-day);
+  var y=d.getUTCFullYear(),y0=new Date(Date.UTC(y,0,1)),week=Math.ceil((((d-y0)/86400000)+1)/7);
+  return {key:y+"W"+String(week).padStart(2,"0"),label:"Tuần "+week+"/"+y}
+}
+function voucherCenterPeriodInfo(r,mode){
+  var k=String(r.dateKey||"");if(mode==="month")return {key:k.slice(0,6),label:k.length>=6?k.slice(4,6)+"/"+k.slice(0,4):r.date||"—"};
+  if(mode==="week")return voucherCenterIsoWeek(k);
+  return {key:k,label:r.date||isoToVi(k.slice(0,4)+"-"+k.slice(4,6)+"-"+k.slice(6,8))}
+}
+function voucherCenterAggregatePeriods(rows){
+  var mode=$("vcGroupMode")?$("vcGroupMode").value:"day",map={};
+  (rows||[]).forEach(function(r){
+    var p=voucherCenterPeriodInfo(r,mode),warehouses=(r.warehouses||[]).length?(r.warehouses||[]):["—"];
+    warehouses.forEach(function(w){
+      var key=p.key+"|"+w;if(!map[key])map[key]={sortKey:p.key,label:p.label,warehouse:w,inQty:0,outQty:0,pnk:0,pxk:0,dck:0,kk:0};
+      var x=map[key];if(r.type==="PNK"){x.inQty+=Number(r.totalQty||0);x.pnk++}else if(r.type==="PXK"){x.outQty+=Number(r.totalQty||0);x.pxk++}else if(r.type==="DCK")x.dck++;else if(r.type==="KK")x.kk++
+    })
+  });
+  return Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return a.sortKey===b.sortKey?String(a.warehouse).localeCompare(String(b.warehouse)):a.sortKey<b.sortKey?1:-1})
+}
+function renderVoucherCenterReport(rows){
+  rows=rows||[];
+  var inQty=0,outQty=0,dckQty=0,kkQty=0;
+  rows.forEach(function(r){if(r.type==="PNK")inQty+=Number(r.totalQty||0);else if(r.type==="PXK")outQty+=Number(r.totalQty||0);else if(r.type==="DCK")dckQty+=Number(r.totalQty||0);else if(r.type==="KK")kkQty+=Number(r.totalQty||0)});
+  $("vcFlowKpis").innerHTML=[
+    ["SL NHẬP",inQty,"green"],["SL XUẤT",outQty,"amber"],["SL ĐIỀU CHUYỂN",dckQty,"blue"],["SL KIỂM KHO",kkQty,"purple"]
+  ].map(function(x){return '<div class="vc-flow-kpi"><span>'+x[0]+'</span><strong class="'+x[2]+'">'+fmt(x[1])+'</strong></div>'}).join("");
+  var agg=voucherCenterAggregatePeriods(rows),tbody=$("vcReportTable").querySelector("tbody");
+  tbody.innerHTML=agg.map(function(x){return '<tr><td>'+esc(x.label)+'</td><td>Kho '+esc(x.warehouse)+'</td><td class="num">'+fmt(x.inQty)+'</td><td class="num">'+fmt(x.outQty)+'</td><td class="num">'+fmt(x.pnk)+'</td><td class="num">'+fmt(x.pxk)+'</td><td class="num">'+fmt(x.dck)+'</td><td class="num">'+fmt(x.kk)+'</td></tr>'}).join("")||'<tr><td colspan="8" class="empty">Không có dữ liệu phù hợp.</td></tr>';
+  var flagged=rows.filter(function(r){return Number(r.anomalyCount||0)>0}).sort(function(a,b){var ah=a.anomalyLevel==="HIGH"?1:0,bh=b.anomalyLevel==="HIGH"?1:0;return bh-ah||Number(b.anomalyCount||0)-Number(a.anomalyCount||0)});
+  $("vcAnomalyList").innerHTML=flagged.slice(0,12).map(function(r){
+    var first=(r.anomalies||[])[0]||{},cls=r.anomalyLevel==="HIGH"?" high":"";
+    return '<div class="vc-anomaly-item'+cls+'"><button type="button" data-voucher-open="'+esc(r.voucher)+'">'+esc(r.voucher)+'</button><strong>'+esc(first.label||"Cần kiểm tra")+'</strong><small>'+esc(first.detail||"")+(r.anomalyCount>1?" · +"+fmt(r.anomalyCount-1)+" cảnh báo":"")+'</small></div>'
+  }).join("")||'<div class="note">Không phát hiện phiếu bất thường trong dữ liệu đang lọc.</div>';
+  applyMobileTableLabels($("vcReportTable"))
+}
+function voucherCenterCsvDownload(data,name){
+  var csv="\ufeff"+data.map(function(row){return row.map(function(v){return '"'+String(v==null?"":v).replace(/"/g,'""')+'"'}).join(",")}).join("\r\n");
+  var blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)
+}
+function exportVoucherManagementCsv(){
+  var rows=filteredVoucherCenter();if(!rows.length)return toast("Không có dữ liệu để xuất báo cáo");
+  var data=[],inQty=0,outQty=0,dckQty=0,kkQty=0,corrected=0,voided=0,flagged=0;
+  rows.forEach(function(r){if(r.type==="PNK")inQty+=Number(r.totalQty||0);else if(r.type==="PXK")outQty+=Number(r.totalQty||0);else if(r.type==="DCK")dckQty+=Number(r.totalQty||0);else if(r.type==="KK")kkQty+=Number(r.totalQty||0);if(r.status==="CORRECTED")corrected++;if(r.status==="VOIDED")voided++;if(Number(r.anomalyCount||0)>0)flagged++});
+  data.push(["BÁO CÁO QUẢN TRỊ PHIẾU V10.15.0"],["Từ ngày",$("vcFrom").value||""],["Đến ngày",voucherCenterDateMode==="day"?($("vcFrom").value||""):($("vcTo").value||"")],[]);
+  data.push(["TỔNG QUAN","Giá trị"],["Tổng phiếu",rows.length],["SL nhập",inQty],["SL xuất",outQty],["SL điều chuyển",dckQty],["SL kiểm kho",kkQty],["Đã sửa",corrected],["Đã hoàn tác",voided],["Cần kiểm tra",flagged],[]);
+  data.push(["THEO KỲ / KHO","Kho","SL nhập","SL xuất","PNK","PXK","DCK","KK"]);
+  voucherCenterAggregatePeriods(rows).forEach(function(x){data.push([x.label,"Kho "+x.warehouse,x.inQty,x.outQty,x.pnk,x.pxk,x.dck,x.kk])});
+  data.push([],["TOP MÃ XUẤT","Tên","SL xuất","Số dòng"]);voucherCenterTopSku(rows,20).forEach(function(x){data.push([x.code,x.name,x.qty,x.count])});
+  data.push([],["TOP ĐỐI TƯỢNG","Số phiếu","Tổng SL"]);voucherCenterRankAll(rows.filter(function(r){return r.type!=="DCK"}),"counterparty").slice(0,20).forEach(function(x){data.push([x.name,x.count,x.qty])});
+  data.push([],["TOP NHÂN VIÊN","Số phiếu","Tổng SL"]);voucherCenterRankAll(rows,"actor").slice(0,20).forEach(function(x){data.push([x.name,x.count,x.qty])});
+  data.push([],["PHIẾU CẦN KIỂM TRA","Mức","Cảnh báo","Chi tiết"]);rows.filter(function(r){return Number(r.anomalyCount||0)>0}).forEach(function(r){(r.anomalies||[]).forEach(function(a){data.push([r.voucher,a.severity,a.label,a.detail])})});
+  voucherCenterCsvDownload(data,"QL_KHO_BAO_CAO_4C_"+($("vcFrom").value||"")+"_"+($("vcTo").value||"")+".csv")
 }
 function exportVoucherCenterCsv(){
   var rows=filteredVoucherCenter();if(!rows.length)return toast("Không có phiếu để xuất");
@@ -901,17 +1018,22 @@ function voucherCenterStatusHtml(s){
   return '<span class="vc-status '+s.toLowerCase()+'">'+voucherCenterStatusLabel(s)+'</span>'
 }
 function filteredVoucherCenter(){
-  var rows=(state.voucherCenter||[]).slice(),q=norm($("vcSearch")&&$("vcSearch").value||""),type=$("vcType")&&$("vcType").value||"",wh=$("vcWarehouse")&&$("vcWarehouse").value||"all",status=$("vcStatus")&&$("vcStatus").value||"";
-  if(q)rows=rows.filter(function(r){return String(r.searchText||"").indexOf(q)>=0||norm([r.voucher,r.counterparty,r.actor,r.reason,r.parentVoucher,(r.relatedVouchers||[]).join(" ")].join(" ")).indexOf(q)>=0});
+  var rows=(state.voucherCenter||[]).slice(),q=norm($("vcSearch")&&$("vcSearch").value||""),type=$("vcType")&&$("vcType").value||"",wh=$("vcWarehouse")&&$("vcWarehouse").value||"all",status=$("vcStatus")&&$("vcStatus").value||"",actor=$("vcActor")&&$("vcActor").value||"",counter=$("vcCounterparty")&&$("vcCounterparty").value||"",anomaly=$("vcAnomaly")&&$("vcAnomaly").value||"";
+  if(q)rows=rows.filter(function(r){return String(r.searchText||"").indexOf(q)>=0||norm([r.voucher,r.counterparty,r.actor,r.reason,r.parentVoucher,(r.relatedVouchers||[]).join(" "),(r.lineItems||[]).map(function(x){return x.code+" "+x.name}).join(" ")].join(" ")).indexOf(q)>=0});
   if(type)rows=rows.filter(function(r){return r.type===type});
   if(wh!=="all")rows=rows.filter(function(r){return (r.warehouses||[]).indexOf(wh)>=0});
   if(status)rows=rows.filter(function(r){return r.status===status});
+  if(actor)rows=rows.filter(function(r){return r.actor===actor});
+  if(counter)rows=rows.filter(function(r){return r.counterparty===counter});
+  if(anomaly==="FLAGGED")rows=rows.filter(function(r){return Number(r.anomalyCount||0)>0});
+  else if(anomaly==="HIGH")rows=rows.filter(function(r){return r.anomalyLevel==="HIGH"});
+  else if(anomaly==="MISSING")rows=rows.filter(function(r){return (r.anomalies||[]).some(function(a){return String(a.code||"").indexOf("MISSING_")===0})});
   return rows
 }
 function renderVoucherCenter(){
-  var rows=filteredVoucherCenter(),counts={posted:0,corrected:0,voided:0};
-  rows.forEach(function(r){if(r.status==="VOIDED")counts.voided++;else if(r.status==="CORRECTED")counts.corrected++;else counts.posted++});
-  $("vcKpiTotal").textContent=fmt(rows.length);$("vcKpiPosted").textContent=fmt(counts.posted);$("vcKpiCorrected").textContent=fmt(counts.corrected);$("vcKpiVoided").textContent=fmt(counts.voided);$("vcCount").textContent=fmt(rows.length)+" phiếu";
+  var rows=filteredVoucherCenter(),counts={posted:0,corrected:0,voided:0,anomaly:0};
+  rows.forEach(function(r){if(r.status==="VOIDED")counts.voided++;else if(r.status==="CORRECTED")counts.corrected++;else counts.posted++;if(Number(r.anomalyCount||0)>0)counts.anomaly++});
+  $("vcKpiTotal").textContent=fmt(rows.length);$("vcKpiPosted").textContent=fmt(counts.posted);$("vcKpiCorrected").textContent=fmt(counts.corrected);$("vcKpiVoided").textContent=fmt(counts.voided);$("vcKpiAnomaly").textContent=fmt(counts.anomaly);$("vcCount").textContent=fmt(rows.length)+" phiếu";
   var tbody=$("voucherCenterTable").querySelector("tbody");
   tbody.innerHTML=rows.map(function(r){
     var related=[];
@@ -919,21 +1041,21 @@ function renderVoucherCenter(){
     (r.relatedVouchers||[]).slice(0,3).forEach(function(v){related.push('<button class="vc-relation" type="button" data-voucher-open="'+esc(v)+'">'+esc(v)+'</button>')});
     if((r.relatedVouchers||[]).length>3)related.push('<span class="note">+'+fmt(r.relatedVouchers.length-3)+'</span>');
     var checked=voucherCenterSelection.has(r.voucher)?" checked":"";
-    return '<tr data-voucher="'+esc(r.voucher)+'"><td><input class="vc-row-check" type="checkbox" data-vc-select="'+esc(r.voucher)+'"'+checked+' aria-label="Chọn '+esc(r.voucher)+'"></td><td>'+esc(r.date||"—")+'</td><td><button class="voucher-link" type="button" data-voucher-open="'+esc(r.voucher)+'">'+esc(r.voucher)+'</button></td><td><span class="vc-type '+String(r.type||"").toLowerCase()+'">'+esc(r.type||"—")+'</span></td><td>'+esc(r.warehouseLabel||"—")+'</td><td>'+esc(r.counterparty||"—")+'</td><td>'+esc(r.actor||"—")+'</td><td>'+esc(r.reason||"—")+'</td><td class="num">'+fmt(r.totalLines||0)+'</td><td class="num"><strong>'+fmt(r.totalQty||0)+'</strong></td><td>'+voucherCenterStatusHtml(r.status)+'</td><td><div class="vc-relations">'+(related.join("")||'<span class="note">—</span>')+'</div></td><td><button class="mini" type="button" data-voucher-open="'+esc(r.voucher)+'">Xem</button></td></tr>'
-  }).join("")||'<tr><td colspan="13" class="empty">Không có phiếu phù hợp bộ lọc.</td></tr>';
+    return '<tr data-voucher="'+esc(r.voucher)+'"><td><input class="vc-row-check" type="checkbox" data-vc-select="'+esc(r.voucher)+'"'+checked+' aria-label="Chọn '+esc(r.voucher)+'"></td><td>'+esc(r.date||"—")+'</td><td><button class="voucher-link" type="button" data-voucher-open="'+esc(r.voucher)+'">'+esc(r.voucher)+'</button></td><td><span class="vc-type '+String(r.type||"").toLowerCase()+'">'+esc(r.type||"—")+'</span></td><td>'+esc(r.warehouseLabel||"—")+'</td><td>'+esc(r.counterparty||"—")+'</td><td>'+esc(r.actor||"—")+'</td><td>'+esc(r.reason||"—")+'</td><td class="num">'+fmt(r.totalLines||0)+'</td><td class="num"><strong>'+fmt(r.totalQty||0)+'</strong></td><td>'+voucherCenterAnomalyHtml(r)+'</td><td>'+voucherCenterStatusHtml(r.status)+'</td><td><div class="vc-relations">'+(related.join("")||'<span class="note">—</span>')+'</div></td><td><button class="mini" type="button" data-voucher-open="'+esc(r.voucher)+'">Xem</button></td></tr>'
+  }).join("")||'<tr><td colspan="14" class="empty">Không có phiếu phù hợp bộ lọc.</td></tr>';
   $("vcFoot").textContent=voucherCenterDateMode==="day"?"Đang hiển thị "+fmt(rows.length)+" phiếu ngày "+isoToVi($("vcFrom").value||todayIso())+".":"Đang hiển thị "+fmt(rows.length)+"/"+fmt((state.voucherCenter||[]).length)+" phiếu trong khoảng ngày đã tải.";
-  renderVoucherCenterAnalytics(rows);updateVoucherCenterSelectionUi(rows);applyMobileTableLabels($("voucherCenterTable"))
+  renderVoucherCenterAnalytics(rows);renderVoucherCenterReport(rows);updateVoucherCenterSelectionUi(rows);applyMobileTableLabels($("voucherCenterTable"))
 }
 function loadVoucherCenter(showToast){
   showToast=!!showToast;
   var from=$("vcFrom").value||todayIso(),to=voucherCenterDateMode==="day"?from:($("vcTo").value||from),tbody=$("voucherCenterTable").querySelector("tbody");
   if(voucherCenterDateMode==="day")$("vcTo").value=from;
   $("vcLoadedAt").textContent="Đang tải...";
-  tbody.innerHTML='<tr><td colspan="13" class="empty">Đang tổng hợp PXK / PNK / KK / DCK...</td></tr>';
+  tbody.innerHTML='<tr><td colspan="14" class="empty">Đang tổng hợp PXK / PNK / KK / DCK và kiểm soát bất thường...</td></tr>';
   google.script.run.withSuccessHandler(function(data){
-    state.voucherCenter=data.rows||[];voucherCenterSelection.clear();voucherCenterLoaded=true;$("vcLoadedAt").textContent="Cập nhật: "+(data.loadedAt||"--");renderVoucherCenter();if(showToast)toast("Đã tải Trung tâm phiếu")
+    state.voucherCenter=data.rows||[];voucherCenterSelection.clear();voucherCenterLoaded=true;voucherCenterRefreshFilterOptions();$("vcLoadedAt").textContent="Cập nhật: "+(data.loadedAt||"--");renderVoucherCenter();if(showToast)toast("Đã tải Trung tâm phiếu 4C")
   }).withFailureHandler(function(e){
-    voucherCenterLoaded=false;$("vcLoadedAt").textContent="Lỗi";tbody.innerHTML='<tr><td colspan="13" class="empty">'+esc(errMsg(e))+'</td></tr>'
+    voucherCenterLoaded=false;$("vcLoadedAt").textContent="Lỗi";tbody.innerHTML='<tr><td colspan="14" class="empty">'+esc(errMsg(e))+'</td></tr>'
   }).getVoucherCenter({fromDate:from,toDate:to,limit:1000})
 }
 
@@ -1407,7 +1529,7 @@ function bindIoModule(){
   },true);
 }
 function exportCsv(){const tab=currentTab();let rows=[];if(tab==="transfer")rows=[["Ngày","Mã điều chuyển","Kho nguồn","Kho đích","Mã","Hàng hóa","ĐVT","SL","Người thực hiện","Trạng thái"],...state.transferHistory.map(x=>[x.date,x.transferId,x.sourceWarehouse,x.destinationWarehouse,x.code,x.name,unitOf(x.code,x.name,x.unit),x.qty,x.person,x.status])];else if(tab==="stock58")rows=[["Mã","Hàng hóa","ĐVT","Tồn","Giá","Giá trị"],...state.stock58.map(x=>[x.code,x.name,unitOf(x.code,x.name,x.unit),x.qty,x.referencePrice||"",x.stockValue||0])];else if(tab==="stock145")rows=[["Dòng","Mã 58","Tên cũ","ĐVT","Tồn","Giá","Giá trị"],...state.stock145.map(x=>[x.sheetRow,x.masterCode,x.legacyName,unitOf(x.masterCode,x.masterName||x.legacyName,x.unit),x.qty,x.referencePrice||"",x.stockValue||0])];else rows=[["Mã","Hàng hóa","ĐVT","Kho 58","Kho 145","Tổng","Tình trạng","Giá trị"],...filteredCombined().map(x=>[x.code,x.name,unitOf(x.code,x.name,x.unit),x.qty58,x.qty145,x.totalQty,x.systemStatus,x.totalValue])];const csv="\ufeff"+rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`QL_KHO_THANH_DUC_${APP_VERSION}_${tab}.csv`;a.click();URL.revokeObjectURL(a.href)}
-function bind(){["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(id=>$(id).addEventListener(id==="search"?"input":"change",renderOverview));$("clearOverview").onclick=()=>{["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(id=>$(id).value="");renderOverview()};["search58","price58"].forEach(id=>$(id).addEventListener(id==="search58"?"input":"change",render58));$("clear58").onclick=()=>{$("search58").value="";$("price58").value="";render58()};["search145","map145","price145"].forEach(id=>$(id).addEventListener(id==="search145"?"input":"change",render145));$("clear145").onclick=()=>{$("search145").value="";$("map145").value="";$("price145").value="";render145()};$("tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;showTab(b.dataset.tab)});document.addEventListener("click",e=>{const vcs=e.target.closest("[data-vc-select]");if(vcs){e.stopPropagation();setVoucherCenterSelected(vcs.dataset.vcSelect,vcs.checked);return}const vs=e.target.closest("[data-vadj-step]");if(vs){const input=document.querySelector(`[data-vadj-qty="${vs.dataset.vadjStep}"]`);if(input){input.value=String(Math.max(0,Number(input.value||0)+Number(vs.dataset.delta||0)));voucherActionInvalidate()}return}const vo=e.target.closest("[data-voucher-open]");if(vo){e.stopPropagation();openVoucherDetail(vo.dataset.voucherOpen);return}const vr=e.target.closest("tr[data-voucher]");if(vr&&vr.dataset.voucher){openVoucherDetail(vr.dataset.voucher);return}const iv=e.target.closest("[data-io-view-voucher]");if(iv){openVoucherDetail(iv.dataset.ioViewVoucher);return}const ta=e.target.closest("[data-transfer-add]");if(ta){e.stopPropagation();addTransferFromAction(ta.dataset.transferAdd,ta.dataset.transferType,ta.dataset.transferQty);return}const trm=e.target.closest("[data-transfer-remove]");if(trm){transferCart.lines=transferCart.lines.filter(r=>norm(r.code)!==norm(trm.dataset.transferRemove));if(!transferCart.lines.length){transferCart.source="";transferCart.dest=""}renderTransferCart();return}const d=e.target.closest("[data-detail-btn]");if(d){e.stopPropagation();openDetail(d.dataset.detailBtn);return}const p58=e.target.closest("[data-price58]");if(p58){e.stopPropagation();openPrice58(p58.dataset.price58);return}const p145=e.target.closest("[data-price145]");if(p145){e.stopPropagation();openPrice145(p145.dataset.price145,p145.dataset.sourceName);return}const mp=e.target.closest("[data-map-row]");if(mp){e.stopPropagation();openMap(mp.dataset.mapRow,mp.dataset.sourceName,mp.dataset.mapCode);return}if(e.target.closest(".row-menu summary"))return;const tr=e.target.closest("tr[data-detail]");if(tr){openDetail(tr.dataset.detail);return}});$("detailClose").onclick=closeDetail;$("voucherClose").onclick=closeVoucherDetail;$("voucherPrint").onclick=printVoucherDetail;$("voucherEdit").onclick=()=>openVoucherAction("CORRECT");$("voucherVoid").onclick=()=>openVoucherAction("VOID");$("voucherActionCancel").onclick=closeVoucherAction;$("voucherActionCheck").onclick=previewVoucherAction;$("voucherActionCommit").onclick=commitVoucherAction;$("voucherBack").addEventListener("click",e=>{if(e.target===$("voucherBack"))closeVoucherDetail()});$("voucherActionBack").addEventListener("click",e=>{if(e.target===$("voucherActionBack"))closeVoucherAction()});$("detailBack").addEventListener("click",e=>{if(e.target===$("detailBack"))closeDetail()});$("saveMeta").onclick=saveMeta;$("detailPrice").onclick=()=>detailCode&&openPrice58(detailCode);$("detailTransfer").onclick=()=>{const b=$("detailTransfer");if(b.dataset.transferCode)addTransferFromAction(b.dataset.transferCode,b.dataset.transferType,b.dataset.transferQty)};$("transferClear").onclick=clearTransferCart;$("transferManualAdd").onclick=addManualTransfer;$("transferManualSearch").addEventListener("keydown",e=>{if(e.key==="Enter")addManualTransfer()});$("transferSubmit").onclick=submitTransfer;$("transferHistoryRefresh").onclick=()=>loadTransferHistory(true);let tht;$("transferHistorySearch").addEventListener("input",()=>{clearTimeout(tht);tht=setTimeout(()=>transferLoaded?renderTransferHistory():loadTransferHistory(false),250)});document.addEventListener("input",e=>{const va=e.target.closest("[data-vadj-qty],#voucherActionActor,#voucherActionCounterparty,#voucherActionReason,#voucherActionNote");if(va){if(va.matches("[data-vadj-qty]"))va.value=String(va.value||"").replace(/[^0-9]/g,"");voucherActionInvalidate();return}const q=e.target.closest("[data-transfer-qty-input]");if(!q)return;const d=String(q.value||"").replace(/[^0-9]/g,"");q.value=d?fmt(Number(d)):"";const line=transferCart.lines.find(r=>norm(r.code)===norm(q.dataset.transferQtyInput));if(line)line.qty=Number(d||0)});$("actionView").addEventListener("change",renderActions);$("actionRefreshView").onclick=renderActions;$("priceCancel").onclick=()=>$("priceBack").classList.remove("open");$("priceSave").onclick=savePrice;$("priceInput").addEventListener("input",e=>{const d=String(e.target.value||"").replace(/[^0-9]/g,"");e.target.value=d?fmt(Number(d)):""});$("mapCancel").onclick=()=>$("mapBack").classList.remove("open");$("mapSave").onclick=saveMap;$("mapInput").addEventListener("input",e=>e.target.value=e.target.value.toUpperCase());const t=todayIso();voucherCenterDateMode="day";$("vcFrom").value=t;$("vcTo").value=t;setVoucherCenterDateMode("day",true);$("vcSearch").addEventListener("input",function(){clearTimeout(voucherCenterTimer);voucherCenterTimer=setTimeout(renderVoucherCenter,180)});["vcType","vcWarehouse","vcStatus"].forEach(function(id){$(id).addEventListener("change",renderVoucherCenter)});$("vcFrom").addEventListener("change",function(){document.querySelectorAll("[data-vc-range]").forEach(function(b){b.classList.remove("active")});if(voucherCenterDateMode==="day")$("vcTo").value=$("vcFrom").value;voucherCenterLoaded=false;loadVoucherCenter(false)});$("vcTo").addEventListener("change",function(){if(voucherCenterDateMode!=="range")return;document.querySelectorAll("[data-vc-range]").forEach(function(b){b.classList.remove("active")});voucherCenterLoaded=false;loadVoucherCenter(false)});document.querySelectorAll("[data-vc-date-mode]").forEach(function(b){b.onclick=function(){setVoucherCenterDateMode(b.dataset.vcDateMode,true);document.querySelectorAll("[data-vc-range]").forEach(function(q){q.classList.remove("active")});if(voucherCenterDateMode==="day")$("vcTo").value=$("vcFrom").value;voucherCenterLoaded=false;loadVoucherCenter(false)}});document.querySelectorAll("[data-vc-range]").forEach(function(b){b.onclick=function(){voucherCenterSetRange(b.dataset.vcRange)}});$("vcSelectAll").onchange=function(){selectAllVoucherCenter(this.checked)};$("vcExport").onclick=exportVoucherCenterCsv;$("vcPrintSelected").onclick=printSelectedVouchers;$("vcRefresh").onclick=function(){voucherCenterLoaded=false;loadVoucherCenter(true)};$("vcClear").onclick=function(){$("vcSearch").value="";$("vcType").value="";$("vcWarehouse").value="all";$("vcStatus").value="";document.querySelectorAll("[data-vc-range]").forEach(function(b){b.classList.toggle("active",b.dataset.vcRange==="today")});$("vcFrom").value=t;$("vcTo").value=t;setVoucherCenterDateMode("day",true);voucherCenterSelection.clear();voucherCenterLoaded=false;loadVoucherCenter(true)};$("journalFrom").value=t;$("journalTo").value=t;let jt;$("journalSearch").addEventListener("input",()=>{clearTimeout(jt);jt=setTimeout(()=>loadJournal(false),350)});["journalWarehouse","journalType","journalFrom","journalTo"].forEach(id=>$(id).addEventListener("change",()=>loadJournal(false)));$("journalClear").onclick=()=>{const d=todayIso();$("journalSearch").value="";$("journalWarehouse").value="58";$("journalType").value="";$("journalFrom").value=d;$("journalTo").value=d;loadJournal(true)};$("refreshNow").onclick=()=>refreshAll({reason:"Đang cập nhật dữ liệu theo yêu cầu"});$("openSheet58").onclick=()=>state.urls[58]?window.open(state.urls[58],"_blank"):toast("Kho 58 chưa tải");$("openSheet145").onclick=()=>state.urls[145]?window.open(state.urls[145],"_blank"):toast("Kho 145 chưa tải");$("exportCsv").onclick=exportCsv;$("aiAnalyze").onclick=sendAiChat;$("aiExecute").onclick=executeAiPreview;$("aiExecutionCancel").onclick=cancelAiExecution;$("aiClear").onclick=newAiChat;$("aiRecentReload").onclick=()=>loadAiRecent(true);$("aiOpsRefresh").onclick=()=>loadAiProactive(true);$("aiCommand").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendAiChat()}});$("aiActor").addEventListener("change",()=>loadSecurity(true));document.querySelectorAll("[data-ai-example]").forEach(b=>b.onclick=()=>{$("aiCommand").value=b.dataset.aiExample;$("aiCommand").focus()});const tools=$("toolsToggle"),menu=$("toolsMenu");if(tools&&menu){tools.onclick=e=>{e.stopPropagation();menu.classList.toggle("open")};document.addEventListener("click",e=>{if(!e.target.closest(".tools-wrap"))menu.classList.remove("open")})}const health=$("healthToggle"),diag=$("statusDiagnostics");if(health&&diag)health.onclick=()=>{diag.classList.toggle("open");$("healthChevron").textContent=diag.classList.contains("open")?"⌃":"⌄"};document.addEventListener("click",e=>{const f=e.target.closest("[data-clear-filter]");if(!f)return;const id=f.dataset.clearFilter;if(id==="all"){["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(k=>$(k).value="")}else if($(id))$(id).value="";renderOverview()});}
+function bind(){["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(id=>$(id).addEventListener(id==="search"?"input":"change",renderOverview));$("clearOverview").onclick=()=>{["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(id=>$(id).value="");renderOverview()};["search58","price58"].forEach(id=>$(id).addEventListener(id==="search58"?"input":"change",render58));$("clear58").onclick=()=>{$("search58").value="";$("price58").value="";render58()};["search145","map145","price145"].forEach(id=>$(id).addEventListener(id==="search145"?"input":"change",render145));$("clear145").onclick=()=>{$("search145").value="";$("map145").value="";$("price145").value="";render145()};$("tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;showTab(b.dataset.tab)});document.addEventListener("click",e=>{const vcs=e.target.closest("[data-vc-select]");if(vcs){e.stopPropagation();setVoucherCenterSelected(vcs.dataset.vcSelect,vcs.checked);return}const vs=e.target.closest("[data-vadj-step]");if(vs){const input=document.querySelector(`[data-vadj-qty="${vs.dataset.vadjStep}"]`);if(input){input.value=String(Math.max(0,Number(input.value||0)+Number(vs.dataset.delta||0)));voucherActionInvalidate()}return}const vo=e.target.closest("[data-voucher-open]");if(vo){e.stopPropagation();openVoucherDetail(vo.dataset.voucherOpen);return}const vr=e.target.closest("tr[data-voucher]");if(vr&&vr.dataset.voucher){openVoucherDetail(vr.dataset.voucher);return}const iv=e.target.closest("[data-io-view-voucher]");if(iv){openVoucherDetail(iv.dataset.ioViewVoucher);return}const ta=e.target.closest("[data-transfer-add]");if(ta){e.stopPropagation();addTransferFromAction(ta.dataset.transferAdd,ta.dataset.transferType,ta.dataset.transferQty);return}const trm=e.target.closest("[data-transfer-remove]");if(trm){transferCart.lines=transferCart.lines.filter(r=>norm(r.code)!==norm(trm.dataset.transferRemove));if(!transferCart.lines.length){transferCart.source="";transferCart.dest=""}renderTransferCart();return}const d=e.target.closest("[data-detail-btn]");if(d){e.stopPropagation();openDetail(d.dataset.detailBtn);return}const p58=e.target.closest("[data-price58]");if(p58){e.stopPropagation();openPrice58(p58.dataset.price58);return}const p145=e.target.closest("[data-price145]");if(p145){e.stopPropagation();openPrice145(p145.dataset.price145,p145.dataset.sourceName);return}const mp=e.target.closest("[data-map-row]");if(mp){e.stopPropagation();openMap(mp.dataset.mapRow,mp.dataset.sourceName,mp.dataset.mapCode);return}if(e.target.closest(".row-menu summary"))return;const tr=e.target.closest("tr[data-detail]");if(tr){openDetail(tr.dataset.detail);return}});$("detailClose").onclick=closeDetail;$("voucherClose").onclick=closeVoucherDetail;$("voucherPrint").onclick=printVoucherDetail;$("voucherEdit").onclick=()=>openVoucherAction("CORRECT");$("voucherVoid").onclick=()=>openVoucherAction("VOID");$("voucherActionCancel").onclick=closeVoucherAction;$("voucherActionCheck").onclick=previewVoucherAction;$("voucherActionCommit").onclick=commitVoucherAction;$("voucherBack").addEventListener("click",e=>{if(e.target===$("voucherBack"))closeVoucherDetail()});$("voucherActionBack").addEventListener("click",e=>{if(e.target===$("voucherActionBack"))closeVoucherAction()});$("detailBack").addEventListener("click",e=>{if(e.target===$("detailBack"))closeDetail()});$("saveMeta").onclick=saveMeta;$("detailPrice").onclick=()=>detailCode&&openPrice58(detailCode);$("detailTransfer").onclick=()=>{const b=$("detailTransfer");if(b.dataset.transferCode)addTransferFromAction(b.dataset.transferCode,b.dataset.transferType,b.dataset.transferQty)};$("transferClear").onclick=clearTransferCart;$("transferManualAdd").onclick=addManualTransfer;$("transferManualSearch").addEventListener("keydown",e=>{if(e.key==="Enter")addManualTransfer()});$("transferSubmit").onclick=submitTransfer;$("transferHistoryRefresh").onclick=()=>loadTransferHistory(true);let tht;$("transferHistorySearch").addEventListener("input",()=>{clearTimeout(tht);tht=setTimeout(()=>transferLoaded?renderTransferHistory():loadTransferHistory(false),250)});document.addEventListener("input",e=>{const va=e.target.closest("[data-vadj-qty],#voucherActionActor,#voucherActionCounterparty,#voucherActionReason,#voucherActionNote");if(va){if(va.matches("[data-vadj-qty]"))va.value=String(va.value||"").replace(/[^0-9]/g,"");voucherActionInvalidate();return}const q=e.target.closest("[data-transfer-qty-input]");if(!q)return;const d=String(q.value||"").replace(/[^0-9]/g,"");q.value=d?fmt(Number(d)):"";const line=transferCart.lines.find(r=>norm(r.code)===norm(q.dataset.transferQtyInput));if(line)line.qty=Number(d||0)});$("actionView").addEventListener("change",renderActions);$("actionRefreshView").onclick=renderActions;$("priceCancel").onclick=()=>$("priceBack").classList.remove("open");$("priceSave").onclick=savePrice;$("priceInput").addEventListener("input",e=>{const d=String(e.target.value||"").replace(/[^0-9]/g,"");e.target.value=d?fmt(Number(d)):""});$("mapCancel").onclick=()=>$("mapBack").classList.remove("open");$("mapSave").onclick=saveMap;$("mapInput").addEventListener("input",e=>e.target.value=e.target.value.toUpperCase());const t=todayIso();voucherCenterDateMode="day";$("vcFrom").value=t;$("vcTo").value=t;setVoucherCenterDateMode("day",true);$("vcSearch").addEventListener("input",function(){clearTimeout(voucherCenterTimer);voucherCenterTimer=setTimeout(renderVoucherCenter,180)});["vcType","vcWarehouse","vcStatus","vcActor","vcCounterparty","vcAnomaly"].forEach(function(id){$(id).addEventListener("change",renderVoucherCenter)});$("vcGroupMode").addEventListener("change",function(){renderVoucherCenterReport(filteredVoucherCenter())});$("vcFrom").addEventListener("change",function(){document.querySelectorAll("[data-vc-range]").forEach(function(b){b.classList.remove("active")});if(voucherCenterDateMode==="day")$("vcTo").value=$("vcFrom").value;voucherCenterLoaded=false;loadVoucherCenter(false)});$("vcTo").addEventListener("change",function(){if(voucherCenterDateMode!=="range")return;document.querySelectorAll("[data-vc-range]").forEach(function(b){b.classList.remove("active")});voucherCenterLoaded=false;loadVoucherCenter(false)});document.querySelectorAll("[data-vc-date-mode]").forEach(function(b){b.onclick=function(){setVoucherCenterDateMode(b.dataset.vcDateMode,true);document.querySelectorAll("[data-vc-range]").forEach(function(q){q.classList.remove("active")});if(voucherCenterDateMode==="day")$("vcTo").value=$("vcFrom").value;voucherCenterLoaded=false;loadVoucherCenter(false)}});document.querySelectorAll("[data-vc-range]").forEach(function(b){b.onclick=function(){voucherCenterSetRange(b.dataset.vcRange)}});$("vcSelectAll").onchange=function(){selectAllVoucherCenter(this.checked)};$("vcExport").onclick=exportVoucherCenterCsv;$("vcExportReport").onclick=exportVoucherManagementCsv;$("vcPrintSelected").onclick=printSelectedVouchers;$("vcRefresh").onclick=function(){voucherCenterLoaded=false;loadVoucherCenter(true)};$("vcClear").onclick=function(){$("vcSearch").value="";$("vcType").value="";$("vcWarehouse").value="all";$("vcStatus").value="";$("vcActor").value="";$("vcCounterparty").value="";$("vcAnomaly").value="";$("vcGroupMode").value="day";document.querySelectorAll("[data-vc-range]").forEach(function(b){b.classList.toggle("active",b.dataset.vcRange==="today")});$("vcFrom").value=t;$("vcTo").value=t;setVoucherCenterDateMode("day",true);voucherCenterSelection.clear();voucherCenterLoaded=false;loadVoucherCenter(true)};$("journalFrom").value=t;$("journalTo").value=t;let jt;$("journalSearch").addEventListener("input",()=>{clearTimeout(jt);jt=setTimeout(()=>loadJournal(false),350)});["journalWarehouse","journalType","journalFrom","journalTo"].forEach(id=>$(id).addEventListener("change",()=>loadJournal(false)));$("journalClear").onclick=()=>{const d=todayIso();$("journalSearch").value="";$("journalWarehouse").value="58";$("journalType").value="";$("journalFrom").value=d;$("journalTo").value=d;loadJournal(true)};$("refreshNow").onclick=()=>refreshAll({reason:"Đang cập nhật dữ liệu theo yêu cầu"});$("openSheet58").onclick=()=>state.urls[58]?window.open(state.urls[58],"_blank"):toast("Kho 58 chưa tải");$("openSheet145").onclick=()=>state.urls[145]?window.open(state.urls[145],"_blank"):toast("Kho 145 chưa tải");$("exportCsv").onclick=exportCsv;$("aiAnalyze").onclick=sendAiChat;$("aiExecute").onclick=executeAiPreview;$("aiExecutionCancel").onclick=cancelAiExecution;$("aiClear").onclick=newAiChat;$("aiRecentReload").onclick=()=>loadAiRecent(true);$("aiOpsRefresh").onclick=()=>loadAiProactive(true);$("aiCommand").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendAiChat()}});$("aiActor").addEventListener("change",()=>loadSecurity(true));document.querySelectorAll("[data-ai-example]").forEach(b=>b.onclick=()=>{$("aiCommand").value=b.dataset.aiExample;$("aiCommand").focus()});const tools=$("toolsToggle"),menu=$("toolsMenu");if(tools&&menu){tools.onclick=e=>{e.stopPropagation();menu.classList.toggle("open")};document.addEventListener("click",e=>{if(!e.target.closest(".tools-wrap"))menu.classList.remove("open")})}const health=$("healthToggle"),diag=$("statusDiagnostics");if(health&&diag)health.onclick=()=>{diag.classList.toggle("open");$("healthChevron").textContent=diag.classList.contains("open")?"⌃":"⌄"};document.addEventListener("click",e=>{const f=e.target.closest("[data-clear-filter]");if(!f)return;const id=f.dataset.clearFilter;if(id==="all"){["search","warehouseFilter","statusFilter","mappingFilter","priceFilter"].forEach(k=>$(k).value="")}else if($(id))$(id).value="";renderOverview()});}
 document.addEventListener("click",e=>{const quick=e.target.closest("[data-ai-quick]");if(quick){askAiQuick(quick.dataset.aiQuick);return}const recent=e.target.closest("[data-ai-recent-index]");if(recent){useAiRecent(Number(recent.dataset.aiRecentIndex));return}const n=e.target.closest("[data-ai-create-new]");if(n){aiCreateNewFromException(Number(n.dataset.aiCreateNew));return}const u=e.target.closest("[data-ai-use-available]");if(u){aiUseAvailableFromException(Number(u.dataset.aiUseAvailable));return}const s=e.target.closest("[data-ai-skip-slip]");if(s){aiSkipSlipFromException(Number(s.dataset.aiSkipSlip));return}const c=e.target.closest("[data-ai-confirm-no-write]");if(c){aiConfirmNoWrite();return}});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if($("voucherActionBack")&&$("voucherActionBack").classList.contains("open")){closeVoucherAction();return}if($("voucherBack")&&$("voucherBack").classList.contains("open"))closeVoucherDetail()});
 window.addEventListener("error",e=>setStatus("error","Lỗi giao diện JavaScript",e.message||"Không rõ lỗi"));window.addEventListener("unhandledrejection",e=>setStatus("error","Lỗi giao diện",String(e.reason||"Promise error")));
