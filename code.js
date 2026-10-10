@@ -5632,7 +5632,7 @@ function inventoryGetTransferVoucherV10132_(voucher){
       sourceWarehouse:r.sourceWarehouse,destinationWarehouse:r.destinationWarehouse,sourceBefore:toNumber_(r.sourceBefore),sourceAfter:toNumber_(r.sourceAfter),
       destinationBefore:toNumber_(r.destinationBefore),destinationAfter:toNumber_(r.destinationAfter),
       counterparty:'Kho '+r.destinationWarehouse,reason:'Điều chuyển kho',note:String(r.note||'')
-    })
+    };})
   };
 }
 function inventoryAdjustmentReverseGroupsV10132_(rows){
