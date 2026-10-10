@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.13.1</title>
+<title>QL KHO THÀNH ĐỨC · V10.13.2</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -28,7 +28,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 .drawer-back{position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:60;display:none}.drawer-back.open{display:block}.drawer{position:absolute;right:0;top:0;height:100%;width:min(620px,95vw);background:#fff;box-shadow:-20px 0 50px rgba(15,23,42,.2);padding:18px;overflow:auto}.drawer-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.drawer-head h2{margin:0 0 4px;font-size:20px}.drawer-head p{margin:0;color:#667085;font-size:12px}.close{border:0;background:#f2f4f7;border-radius:9px;width:34px;height:34px;cursor:pointer;font-weight:900}.detail-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.detail-kpi{border:1px solid #eaecf0;border-radius:12px;padding:10px;text-align:center}.detail-kpi span{display:block;font-size:11px;color:#667085}.detail-kpi strong{display:block;font-size:20px;margin-top:4px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:11px;color:#667085;font-weight:800}.checkline{display:flex;align-items:center;gap:8px;font-size:11px!important;color:#344054!important}.checkline input{width:17px!important;height:17px!important;accent-color:#1d4ed8}.field input{height:42px;padding:0 12px;font-size:14px}.field textarea{min-height:78px;padding:9px;resize:vertical}.drawer-actions{display:flex;gap:8px;justify-content:flex-end;margin:10px 0 15px}.history{margin-top:14px}.history table{min-width:850px}
 .modal-back{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:70;display:none;align-items:center;justify-content:center;padding:18px}.modal-back.open{display:flex}.modal{width:min(520px,96vw);background:#fff;border-radius:18px;padding:18px;box-shadow:0 24px 70px rgba(15,23,42,.28)}.modal h2{margin:0 0 7px;font-size:20px}.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:13px}.toast{position:fixed;right:20px;bottom:20px;z-index:100;background:#101828;color:#fff;border-radius:12px;padding:10px 13px;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s;font-size:12px;max-width:420px}.toast.show{opacity:1;transform:translateY(0)}
 
-/* V10.13.1 · Nhập / Xuất kho · Phase 1 */
+/* V10.13.2 · Nhập / Xuất kho · Phase 1 */
 .io-layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
 .io-builder{padding:18px}.io-preview-side{padding:18px;position:sticky;top:96px}
 .io-modebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.io-mode{height:44px;padding:0 18px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#344054;font-weight:850;cursor:pointer}.io-mode.active.in{background:#ecfdf3;border-color:#86efac;color:#166534}.io-mode.active.out{background:#fff7ed;border-color:#fdba74;color:#9a3412}
@@ -673,7 +673,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.13.1";
+let APP_VERSION="V10.13.2";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
@@ -782,37 +782,46 @@ function loadJournal(showToast=false){const from=$("journalFrom").value||todayIs
 
 function openVoucherDetail(voucher){
   voucher=String(voucher||"").trim();if(!voucher)return;
-  voucherDetail=null;$("voucherTitle").textContent=voucher;$("voucherSubtitle").textContent="Đang tải chứng từ...";$("voucherStatus").textContent="ĐANG TẢI";$("voucherStatus").className="badge info";$("voucherLoading").style.display="block";$("voucherLoading").textContent="Đang đọc phiếu từ Nhật ký live...";$("voucherContent").style.display="none";$("voucherBack").classList.add("open");
+  voucherDetail=null;$("voucherTitle").textContent=voucher;$("voucherSubtitle").textContent="Đang tải chứng từ...";$("voucherStatus").textContent="ĐANG TẢI";$("voucherStatus").className="badge info";$("voucherLoading").style.display="block";$("voucherLoading").textContent="Đang đọc phiếu từ dữ liệu live...";$("voucherContent").style.display="none";$("voucherBack").classList.add("open");
   google.script.run.withSuccessHandler(function(data){
     voucherDetail=data;
     var statusLabel=data.status==="VOIDED"?"ĐÃ HOÀN TÁC":data.status==="CORRECTED"?"ĐÃ SỬA":"ĐÃ GHI";
     var statusClass=data.status==="VOIDED"?"badge out":data.status==="CORRECTED"?"badge warn":"badge ok";
     $("voucherTitle").textContent=data.operationLabel||"Chi tiết phiếu";$("voucherSubtitle").textContent=(data.voucher||voucher)+" · "+(data.date||"")+" · "+(data.warehouseLabel||"");$("voucherStatus").textContent=statusLabel;$("voucherStatus").className=statusClass;
+    var routeLabel=data.operation==="TRANSFER"?(data.warehouseLabel||"—"):(data.warehouseLabel||"—")+" · "+(data.date||"—");
     $("voucherMeta").innerHTML=
       '<div class="voucher-meta-card"><span>SỐ PHIẾU</span><strong>'+esc(data.voucher||"—")+'</strong></div>'+
-      '<div class="voucher-meta-card"><span>KHO / NGÀY</span><strong>'+esc(data.warehouseLabel||"—")+' · '+esc(data.date||"—")+'</strong></div>'+
-      '<div class="voucher-meta-card"><span>ĐỐI TƯỢNG</span><strong>'+esc(data.counterparty||"—")+'</strong></div>'+
+      '<div class="voucher-meta-card"><span>'+(data.operation==="TRANSFER"?"HƯỚNG ĐIỀU CHUYỂN":"KHO / NGÀY")+'</span><strong>'+esc(routeLabel)+'</strong></div>'+
+      '<div class="voucher-meta-card"><span>'+(data.operation==="TRANSFER"?"KHO ĐÍCH":"ĐỐI TƯỢNG")+'</span><strong>'+esc(data.counterparty||"—")+'</strong></div>'+
       '<div class="voucher-meta-card"><span>NGƯỜI THỰC HIỆN</span><strong>'+esc(data.actor||"Không xác định")+'</strong></div>'+
       '<div class="voucher-meta-card"><span>LÝ DO</span><strong>'+esc(data.reason||"—")+'</strong></div>'+
       '<div class="voucher-meta-card"><span>TỔNG</span><strong>'+fmt(data.totalLines||0)+' dòng · SL '+fmt(data.totalQty||0)+'</strong></div>';
-    $("voucherLinesTable").querySelector("tbody").innerHTML=(data.rows||[]).map(function(r){return '<tr><td><strong>'+esc(r.code||"—")+'</strong></td><td>'+esc(r.name||"")+'</td><td>Kho '+esc(r.warehouse||"—")+'</td><td class="num">'+(r.input?fmt(r.input):"—")+'</td><td class="num">'+(r.output?fmt(r.output):"—")+'</td><td class="num">'+(r.before==null?"—":fmt(r.before))+'</td><td class="num">'+(r.after==null?"—":fmt(r.after))+'</td></tr>'}).join("");
+    var table=$("voucherLinesTable"),thead=table.querySelector("thead"),tbody=table.querySelector("tbody");
+    if(data.operation==="TRANSFER"){
+      thead.innerHTML='<tr><th>Mã</th><th>Hàng hóa</th><th>Hướng</th><th class="num">SL</th><th class="num">Nguồn trước → sau</th><th class="num">Đích trước → sau</th></tr>';
+      tbody.innerHTML=(data.rows||[]).map(function(r){return '<tr><td><strong>'+esc(r.code||"—")+'</strong></td><td>'+esc(r.name||"")+'</td><td>Kho '+esc(r.sourceWarehouse||"—")+' → '+esc(r.destinationWarehouse||"—")+'</td><td class="num">'+fmt(Math.max(Number(r.input||0),Number(r.output||0)))+'</td><td class="num">'+fmt(r.sourceBefore)+' → '+fmt(r.sourceAfter)+'</td><td class="num">'+fmt(r.destinationBefore)+' → '+fmt(r.destinationAfter)+'</td></tr>'}).join("");
+    }else{
+      thead.innerHTML='<tr><th>Mã</th><th>Hàng hóa</th><th>Kho</th><th class="num">Nhập</th><th class="num">Xuất</th><th class="num">Tồn trước</th><th class="num">Tồn sau</th></tr>';
+      tbody.innerHTML=(data.rows||[]).map(function(r){return '<tr><td><strong>'+esc(r.code||"—")+'</strong></td><td>'+esc(r.name||"")+'</td><td>Kho '+esc(r.warehouse||"—")+'</td><td class="num">'+(r.input?fmt(r.input):"—")+'</td><td class="num">'+(r.output?fmt(r.output):"—")+'</td><td class="num">'+(r.before==null?"—":fmt(r.before))+'</td><td class="num">'+(r.after==null?"—":fmt(r.after))+'</td></tr>'}).join("");
+    }
     var related=Array.isArray(data.relatedVouchers)?data.relatedVouchers:[];
     $("voucherRelations").innerHTML=related.length?'<span class="note">Chứng từ liên quan:</span>'+related.map(function(v){return '<button class="voucher-related-btn" type="button" data-voucher-open="'+esc(v)+'">'+esc(v)+'</button>'}).join(""):"";
     var allowAdjust=canPerm("ADJUST");
     $("voucherEdit").disabled=!(data.canEdit&&allowAdjust);$("voucherVoid").disabled=!(data.canVoid&&allowAdjust);
-    $("voucherEdit").title=!allowAdjust?"Cần quyền MANAGER/ADJUST":(!data.canEdit?"Phiếu này không còn được sửa trực tiếp; hãy mở phiếu thay thế.":"");
+    $("voucherEdit").title=!allowAdjust?"Cần quyền MANAGER/ADJUST":(!data.canEdit?(data.operation==="TRANSFER"||data.operation==="ADJUST"?"3C chỉ hỗ trợ hoàn tác an toàn cho loại phiếu này.":"Phiếu này không còn được sửa; hãy mở phiếu thay thế."):"");
     $("voucherVoid").title=!allowAdjust?"Cần quyền MANAGER/ADJUST":(!data.canVoid?"Phiếu này không còn được hoàn tác.":"");
-    $("voucherLoading").style.display="none";$("voucherContent").style.display="block";applyMobileTableLabels($("voucherLinesTable"));
+    $("voucherLoading").style.display="none";$("voucherContent").style.display="block";applyMobileTableLabels(table);
   }).withFailureHandler(function(e){$("voucherStatus").textContent="LỖI";$("voucherStatus").className="badge out";$("voucherLoading").textContent="Không tải được phiếu: "+errMsg(e)}).getInventoryVoucherDetail({voucher:voucher})
 }
 function closeVoucherDetail(){$("voucherBack").classList.remove("open");voucherDetail=null}
 function buildVoucherPrintHtml(data){
-  var rows=data.rows||[],qty=data.totalQty||0;
-  return '<div class="voucher-print-sheet"><div class="voucher-print-title"><h1>QL KHO THÀNH ĐỨC</h1><h2>'+esc(data.operationLabel||"PHIẾU KHO")+'</h2><p>Số: <strong>'+esc(data.voucher||"")+'</strong></p></div>'+
-    '<div class="voucher-print-info"><div>Ngày: <strong>'+esc(data.date||"")+'</strong></div><div>Kho: <strong>'+esc(data.warehouseLabel||"")+'</strong></div><div>Đối tượng: <strong>'+esc(data.counterparty||"—")+'</strong></div><div>Người thực hiện: <strong>'+esc(data.actor||"—")+'</strong></div><div>Lý do: <strong>'+esc(data.reason||"—")+'</strong></div><div>Tổng số lượng: <strong>'+fmt(qty)+'</strong></div></div>'+
-    '<table class="voucher-print-table"><thead><tr><th>STT</th><th>Mã</th><th>Hàng hóa</th><th>ĐVT</th><th>Kho</th><th>SL</th></tr></thead><tbody>'+
-    rows.map(function(r,i){return '<tr><td style="text-align:center">'+(i+1)+'</td><td>'+esc(r.code||"")+'</td><td>'+esc(r.name||"")+'</td><td>'+esc(r.unit||"")+'</td><td style="text-align:center">'+esc(r.warehouse||"")+'</td><td style="text-align:right">'+fmt(Math.max(Number(r.input||0),Number(r.output||0)))+'</td></tr>'}).join("")+
-    '</tbody></table><div class="voucher-print-sign"><div><strong>Người lập phiếu</strong>Ký, ghi rõ họ tên</div><div><strong>Người giao / nhận</strong>Ký, ghi rõ họ tên</div><div><strong>Người nhận hàng</strong>Ký, ghi rõ họ tên</div></div><div class="voucher-print-footer">In từ QL KHO THÀNH ĐỨC · '+esc(APP_VERSION)+'</div></div>'
+  var rows=data.rows||[],qty=data.totalQty||0,isTransfer=data.operation==="TRANSFER";
+  var info='<div class="voucher-print-info"><div>Ngày: <strong>'+esc(data.date||"")+'</strong></div><div>'+(isTransfer?'Hướng':'Kho')+': <strong>'+esc(data.warehouseLabel||"")+'</strong></div><div>Đối tượng: <strong>'+esc(data.counterparty||"—")+'</strong></div><div>Người thực hiện: <strong>'+esc(data.actor||"—")+'</strong></div><div>Lý do: <strong>'+esc(data.reason||"—")+'</strong></div><div>Tổng số lượng: <strong>'+fmt(qty)+'</strong></div></div>';
+  var table=isTransfer?
+    '<table class="voucher-print-table"><thead><tr><th>STT</th><th>Mã</th><th>Hàng hóa</th><th>ĐVT</th><th>Hướng</th><th>SL</th></tr></thead><tbody>'+rows.map(function(r,i){return '<tr><td style="text-align:center">'+(i+1)+'</td><td>'+esc(r.code||"")+'</td><td>'+esc(r.name||"")+'</td><td>'+esc(r.unit||"")+'</td><td>Kho '+esc(r.sourceWarehouse||"")+' → Kho '+esc(r.destinationWarehouse||"")+'</td><td style="text-align:right">'+fmt(Math.max(Number(r.input||0),Number(r.output||0)))+'</td></tr>'}).join("")+'</tbody></table>':
+    '<table class="voucher-print-table"><thead><tr><th>STT</th><th>Mã</th><th>Hàng hóa</th><th>ĐVT</th><th>Kho</th><th>SL</th></tr></thead><tbody>'+rows.map(function(r,i){return '<tr><td style="text-align:center">'+(i+1)+'</td><td>'+esc(r.code||"")+'</td><td>'+esc(r.name||"")+'</td><td>'+esc(r.unit||"")+'</td><td style="text-align:center">'+esc(r.warehouse||"")+'</td><td style="text-align:right">'+fmt(Math.max(Number(r.input||0),Number(r.output||0)))+'</td></tr>'}).join("")+'</tbody></table>';
+  return '<div class="voucher-print-sheet"><div class="voucher-print-title"><h1>QL KHO THÀNH ĐỨC</h1><h2>'+esc(data.operationLabel||"PHIẾU KHO")+'</h2><p>Số: <strong>'+esc(data.voucher||"")+'</strong></p></div>'+info+table+
+    '<div class="voucher-print-sign"><div><strong>Người lập phiếu</strong>Ký, ghi rõ họ tên</div><div><strong>Người giao / nhận</strong>Ký, ghi rõ họ tên</div><div><strong>Người nhận hàng</strong>Ký, ghi rõ họ tên</div></div><div class="voucher-print-footer">In từ QL KHO THÀNH ĐỨC · '+esc(APP_VERSION)+'</div></div>'
 }
 function printVoucherDetail(){if(!voucherDetail)return toast("Chưa có phiếu để in");$("voucherPrintArea").innerHTML=buildVoucherPrintHtml(voucherDetail);window.print()}
 function voucherEditableLines(){
@@ -864,7 +873,7 @@ function previewVoucherAction(){
     if(!data||!data.ready){box.innerHTML='<div class="note amber"><strong>Không thể thực hiện:</strong><br>'+esc(data&&data.clarification||"Bị Rule Engine chặn")+'</div>';return}
     voucherAction.preview=data;commit.disabled=false;
     var slips=data.slips||[];
-    box.innerHTML=slips.map(function(s,idx){var label=voucherAction.mode==="VOID"?"Bút toán hoàn tác":(idx===0?"Bước 1 · Đảo phiếu gốc":"Bước 2 · Phiếu thay thế");return '<div class="voucher-adjust-step"><div class="voucher-adjust-step-head"><span>'+esc(label)+'</span><span>'+esc(s.operationLabel||s.operation)+'</span></div>'+(s.lines||[]).map(function(l){return '<div class="voucher-adjust-line"><span>'+esc(l.code)+' · SL '+fmt(l.qty)+'</span><strong>'+fmt(l.before)+' → '+fmt(l.after)+'</strong></div>'}).join("")+'</div>'}).join("")+'<div class="note" style="margin-top:8px">Ngày bút toán điều chỉnh: '+esc(data.transactionDateDisplay||"hôm nay")+' · Rule Engine '+esc(data.ruleSet||"")+'</div>';
+    box.innerHTML=slips.map(function(s,idx){var label=voucherAction.mode==="VOID"?"Bút toán hoàn tác":(idx===0?"Bước 1 · Đảo phiếu gốc":"Bước 2 · Phiếu thay thế");return '<div class="voucher-adjust-step"><div class="voucher-adjust-step-head"><span>'+esc(label)+'</span><span>'+esc(s.operationLabel||s.operation)+'</span></div>'+(s.lines||[]).map(function(l){var move=s.operation==="TRANSFER"?(fmt(l.before)+' → '+fmt(l.after)+' · đích '+fmt(l.destinationBefore)+' → '+fmt(l.destinationAfter)):(fmt(l.before)+' → '+fmt(l.after));return '<div class="voucher-adjust-line"><span>'+esc(l.code)+' · SL '+fmt(l.qty)+'</span><strong>'+move+'</strong></div>'}).join("")+'</div>'}).join("")+'<div class="note" style="margin-top:8px">Ngày bút toán điều chỉnh: '+esc(data.transactionDateDisplay||"hôm nay")+' · Rule Engine '+esc(data.ruleSet||"")+'</div>';
   }).withFailureHandler(function(e){btn.disabled=false;btn.textContent="Kiểm tra thay đổi";box.classList.add("open");box.innerHTML='<div class="note amber">'+esc(errMsg(e))+'</div>'}).prepareVoucherAdjustmentV10131(payload)
 }
 function commitVoucherAction(){
