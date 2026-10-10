@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.13.0';
+const APP_VERSION = 'V10.13.1';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -3571,7 +3571,7 @@ function prepareManualInventoryPreview(payload) {
   coreRequirePermissionV109_(permission,req.actor,'prepareManualInventoryPreview',req.operation+' Kho '+req.warehouse);
   const slip={
     slipNo:'1',operation:req.operation,warehouse:req.warehouse,sourceWarehouse:'',destinationWarehouse:'',
-    actor:req.actor,counterparty:req.counterparty,note:manualReasonNoteV10122_(req.reason,req.note),
+    actor:req.actor,counterparty:req.counterparty,note:manualReasonNoteV10122_(req.reason,req.note),businessReason:req.reason,
     lines:req.lines.map(function(line){return {code:line.code,quantity:line.qty,itemText:line.code,sourceExcerpt:line.code};})
   };
   try{
@@ -4658,7 +4658,7 @@ function aiBuildBatchLivePreview_(request) {
     return {
       slipNo:slip.slipNo,operation:slip.operation,operationLabel:aiOperationLabel_(slip.operation),warehouse:slip.warehouse || '',
       sourceWarehouse:slip.sourceWarehouse || '',destinationWarehouse:slip.destinationWarehouse || '',actor:slip.actor,
-      counterparty:slip.counterparty,note:slip.note,lines:outLines,
+      counterparty:slip.counterparty,note:slip.note,businessReason:String(slip.businessReason||''),lines:outLines,
       totalQty:outLines.reduce(function(sum,x){return sum + toNumber_(x.qty);},0)
     };
   });
@@ -4733,6 +4733,10 @@ function aiExecuteBatchPreview_(preview) {
   let sequenceReservation = null;
   try {
     if (!preview || !preview.ready || !Array.isArray(preview.slips) || !preview.slips.length) throw coreRuleError_('R45','Preview không hợp lệ để commit.');
+    if(preview.historicalGuard&&preview.historicalGuard.originalVoucher){
+      const lifecycle=inventoryVoucherLifecycleV10131_(preview.historicalGuard.originalVoucher);
+      if(lifecycle.status!=='POSTED')throw coreRuleError_('R50','Phiếu '+preview.historicalGuard.originalVoucher+' đã '+(lifecycle.status==='VOIDED'?'được hoàn tác':'được sửa')+'. Hãy mở phiếu thay thế mới nhất trước khi thao tác tiếp.');
+    }
     ledger = coreLedgerBegin_(preview);
 
     const ss58 = getSpreadsheet_();
@@ -4787,7 +4791,7 @@ function aiExecuteBatchPreview_(preview) {
       const receiptVoucher = 'PNK-' + dateStamp + '-' + suffix;
       const transferId = 'DCK-' + dateStamp + '-' + suffix;
       const slipResult = {slipNo:slip.slipNo,operation:op,voucher:op==='TRANSFER'?transferId:voucher,issueVoucher:op==='TRANSFER'?issueVoucher:'',receiptVoucher:op==='TRANSFER'?receiptVoucher:'',lineCount:slip.lines.length,totalQty:0};
-      const reason = coreBusinessReasonV105_(op,slip.counterparty,slip.note);
+      const reason = String(slip.businessReason||'').trim() || coreBusinessReasonV105_(op,slip.counterparty,slip.note);
       const counterparty = coreCounterpartyV105_(op,slip.counterparty,slip.note) || slip.actor;
 
       slip.lines.forEach(function(line, lineIndex) {
@@ -4892,6 +4896,7 @@ function aiExecuteBatchPreview_(preview) {
     // R38/R40: hậu kiểm tồn + chứng từ trước khi báo thành công.
     const verified=coreVerifyCommittedV105_(preview,vouchers);
     const committed = {success:true,batch:true,previewId:preview.previewId,transactionId:ledger.txId,transactionDate:transactionDate,transactionDateDisplay:aiDisplayDateKey_(transactionDate),slipCount:preview.slips.length,lineCount:lineCount,totalQty:totalQty,vouchers:vouchers,voucher:vouchers.length?vouchers[0].voucher:'',derived:derived,verified:true,createdAt:Utilities.formatDate(now,DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')};
+    if(preview.historicalGuard){committed.originalVoucher=String(preview.historicalGuard.originalVoucher||'');committed.correctionType=String(preview.historicalGuard.action||'');}
     coreUpdateTransactionLinesStatus_(txLinesBlock,'COMMITTED','');
     coreLedgerFinish_(ledger,'COMMITTED',vouchers,verified.after,'',sequenceReservation);
     try { CacheService.getScriptCache().put('AI_EXECUTED_' + preview.previewId, JSON.stringify(committed), 21600); } catch(e) {}
@@ -5526,6 +5531,34 @@ function inventoryVoucherActorFromNoteV10130_(note){
   const m=s.match(/^(.+?)\s+(xuất|nhận|kiểm kho|chuyển kho);/i);
   return m?String(m[1]||'').trim():'';
 }
+function inventoryVoucherCounterpartyV10131_(row){
+  row=row||{};
+  if(String(row.warehouse||'')==='145'){
+    const m=String(row.reason||'').match(/(?:^|\|)\s*Đối tượng:\s*([^|]+)/i);
+    return m?String(m[1]||'').trim():'';
+  }
+  return String(row.person||'').trim();
+}
+function inventoryVoucherReasonV10131_(row){
+  row=row||{};
+  const raw=String(row.reason||'').trim();
+  if(String(row.warehouse||'')==='145')return String(raw.split('|')[0]||'').trim();
+  return raw;
+}
+function inventoryVoucherUserNoteV10131_(row){
+  row=row||{};
+  const raw=[row.reason,row.note].filter(Boolean).join(' · ');
+  const m=raw.match(/Ghi chú:\s*([^|·]+)/i);
+  return m?String(m[1]||'').trim():'';
+}
+function inventoryVoucherActorV10131_(rows){
+  rows=Array.isArray(rows)?rows:[];
+  const wh145=rows.find(function(r){return String(r.warehouse||'')==='145'&&String(r.person||'').trim();});
+  if(wh145)return String(wh145.person||'').trim();
+  let actor='';
+  rows.some(function(r){actor=inventoryVoucherActorFromNoteV10130_(r.note);return Boolean(actor);});
+  return actor;
+}
 function inventoryVoucherSummaryV10130_(voucherData){
   voucherData=voucherData||{};
   const rows=Array.isArray(voucherData.rows)?voucherData.rows:[];
@@ -5535,12 +5568,31 @@ function inventoryVoucherSummaryV10130_(voucherData){
   const operation=prefix==='PXK'?'OUT':prefix==='PNK'?'IN':prefix==='KK'?'ADJUST':prefix==='DCK'?'TRANSFER':'';
   const operationLabel=operation==='OUT'?'PHIẾU XUẤT KHO':operation==='IN'?'PHIẾU NHẬP KHO':operation==='ADJUST'?'PHIẾU KIỂM KHO':operation==='TRANSFER'?'PHIẾU ĐIỀU CHUYỂN':'PHIẾU KHO';
   const warehouses=Array.from(new Set(rows.map(function(r){return String(r.warehouse||'').trim();}).filter(Boolean)));
-  const counterparty=String(first.person||'').trim();
-  const reason=String(first.reason||'').trim();
-  let actor='';
-  rows.some(function(r){actor=inventoryVoucherActorFromNoteV10130_(r.note);return Boolean(actor);});
+  const counterparty=inventoryVoucherCounterpartyV10131_(first);
+  const reason=inventoryVoucherReasonV10131_(first);
+  const actor=inventoryVoucherActorV10131_(rows);
+  const note=inventoryVoucherUserNoteV10131_(first);
   const totalQty=rows.reduce(function(sum,r){return sum+Math.max(toNumber_(r.input),toNumber_(r.output));},0);
-  return {voucher:voucher,operation:operation,operationLabel:operationLabel,date:String(first.date||''),warehouses:warehouses,warehouseLabel:warehouses.length===1?'Kho '+warehouses[0]:warehouses.map(function(w){return 'Kho '+w;}).join(' / '),counterparty:counterparty,reason:reason,actor:actor,totalLines:rows.length,totalQty:totalQty,originalImmutable:true,status:'POSTED'};
+  return {voucher:voucher,operation:operation,operationLabel:operationLabel,date:String(first.date||''),warehouses:warehouses,warehouseLabel:warehouses.length===1?'Kho '+warehouses[0]:warehouses.map(function(w){return 'Kho '+w;}).join(' / '),counterparty:counterparty,reason:reason,note:note,actor:actor,totalLines:rows.length,totalQty:totalQty,originalImmutable:true,status:'POSTED'};
+}
+function inventoryVoucherLifecycleFromRowsV10131_(voucher,rows){
+  voucher=String(voucher||'').trim().toUpperCase();
+  rows=Array.isArray(rows)?rows:[];
+  const related=[],seen={};let hasVoid=false,hasCorrect=false;
+  rows.forEach(function(r){
+    const rv=String(r.voucher||'').trim().toUpperCase();
+    if(!rv||rv===voucher)return;
+    const text=String((r.reason||'')+' '+(r.note||'')).toUpperCase();
+    if(text.indexOf('[VOID '+voucher+']')>=0){hasVoid=true;if(!seen[rv]){seen[rv]=1;related.push(rv);}}
+    if(text.indexOf('[CORRECT '+voucher+']')>=0){hasCorrect=true;if(!seen[rv]){seen[rv]=1;related.push(rv);}}
+  });
+  return {voucher:voucher,status:hasVoid?'VOIDED':hasCorrect?'CORRECTED':'POSTED',relatedVouchers:related,hasAdjustment:hasVoid||hasCorrect};
+}
+function inventoryVoucherLifecycleV10131_(voucher){
+  voucher=String(voucher||'').trim().toUpperCase();
+  if(!voucher)return {voucher:'',status:'UNKNOWN',relatedVouchers:[],hasAdjustment:false};
+  const data=getJournalHistory({warehouse:'all',query:voucher,allDates:true,limit:500});
+  return inventoryVoucherLifecycleFromRowsV10131_(voucher,data.rows||[]);
 }
 function getInventoryVoucherDetail(payload){
   payload=payload||{};
@@ -5552,14 +5604,17 @@ function getInventoryVoucherDetail(payload){
     throw new Error(found&&found.message||('Không tìm thấy phiếu '+voucher+'.'));
   }
   const summary=inventoryVoucherSummaryV10130_(found);
+  const lifecycle=inventoryVoucherLifecycleV10131_(summary.voucher);
+  const supported=['IN','OUT'].indexOf(summary.operation)>=0&&summary.warehouses.length===1;
   return Object.assign({},summary,{
+    status:lifecycle.status,relatedVouchers:lifecycle.relatedVouchers,
     rows:(found.rows||[]).map(function(r){return {
       date:r.date,voucher:r.voucher,warehouse:String(r.warehouse||''),code:String(r.code||''),name:String(r.name||''),
       unit:String(r.unit||''),type:String(r.type||''),input:toNumber_(r.input),output:toNumber_(r.output),
       before:r.before==null?null:toNumber_(r.before),after:r.after==null?null:toNumber_(r.after),
-      counterparty:String(r.person||''),reason:String(r.reason||''),note:String(r.note||'')
+      counterparty:inventoryVoucherCounterpartyV10131_(r),reason:inventoryVoucherReasonV10131_(r),note:inventoryVoucherUserNoteV10131_(r)
     };}),
-    canPrint:true,canEdit:false,canVoid:false,phase:'3A',
+    canPrint:true,canEdit:supported&&lifecycle.status==='POSTED',canVoid:supported&&lifecycle.status==='POSTED',phase:'3B',
     correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,
     loadedAt:Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')
   });
@@ -5578,6 +5633,101 @@ function inventoryVoucherPhase3ASelfTestV10130_(){
   return {version:'VOUCHER_UI_PHASE3A_2026-10-10',total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
 }
 
+const VOUCHER_ADJUST_CONFIG_V10131=Object.freeze({VERSION:'VOUCHER_ADJUST_V1_2026-10-10',CACHE_PREFIX:'VOUCHER_ADJ_PREVIEW_',MAX_NOTE:500,MAX_REASON:160,MAX_COUNTERPARTY:160});
+function inventoryVoucherOriginalLinesV10131_(found){
+  const by={},order=[];
+  (found.rows||[]).forEach(function(r){
+    const code=String(r.code||'').trim().toUpperCase(),qty=Math.max(toNumber_(r.input),toNumber_(r.output));
+    if(!code||qty<=0)return;
+    if(!by[code]){by[code]={code:code,name:String(r.name||''),unit:String(r.unit||''),qty:0,warehouse:String(r.warehouse||'')};order.push(code);}
+    by[code].qty+=qty;
+  });
+  return order.map(function(code){return by[code];});
+}
+function inventoryVoucherStorePreviewV10131_(preview){
+  const id=Utilities.getUuid();preview.previewId=id;preview.source='VOUCHER_ADJUSTMENT';preview.model='DETERMINISTIC_VOUCHER_3B';
+  preview.createdAt=Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss');
+  CacheService.getScriptCache().put(VOUCHER_ADJUST_CONFIG_V10131.CACHE_PREFIX+id,JSON.stringify(preview),AI_CONFIG.PREVIEW_TTL_SECONDS);
+  aiAudit_({previewId:id,command:preview.command,operation:'VOUCHER_'+String(preview.correctionType||''),warehouse:(preview.slips||[]).map(function(s){return s.warehouse;}).join(' | '),actor:(preview.slips||[]).map(function(s){return s.actor;}).join(', '),status:'VOUCHER_ADJUST_PREVIEW',result:JSON.stringify({originalVoucher:preview.originalVoucher,correctionType:preview.correctionType}),model:'DETERMINISTIC_VOUCHER_3B'});
+  return preview;
+}
+function prepareVoucherAdjustmentV10131(payload){
+  payload=payload||{};
+  const voucher=String(payload.voucher||'').trim().toUpperCase();
+  const action=String(payload.action||'').trim().toUpperCase();
+  const actor=String(payload.actor||'').trim();
+  if(['VOID','CORRECT'].indexOf(action)<0)throw new Error('Thao tác phiếu không hợp lệ.');
+  if(!voucher)throw new Error('Thiếu số phiếu.');
+  if(!actor)throw new Error('Thiếu người thực hiện điều chỉnh.');
+  coreRequirePermissionV109_('ADJUST',actor,'prepareVoucherAdjustmentV10131',action+' '+voucher);
+  const found=aiChatGetVoucherV1107_(voucher,'all');
+  if(!found||!found.found)throw new Error(found&&found.message||('Không tìm thấy '+voucher+'.'));
+  const summary=inventoryVoucherSummaryV10130_(found);
+  if(['IN','OUT'].indexOf(summary.operation)<0||summary.warehouses.length!==1)throw new Error('Phase 3B hiện chỉ hỗ trợ PNK/PXK một kho.');
+  const lifecycle=inventoryVoucherLifecycleV10131_(voucher);
+  if(lifecycle.status!=='POSTED')throw new Error('Phiếu '+voucher+' đã '+(lifecycle.status==='VOIDED'?'được hoàn tác':'được sửa')+'. Không thể thao tác lại phiếu gốc.');
+  const warehouse=summary.warehouses[0],originalLines=inventoryVoucherOriginalLinesV10131_(found);
+  if(!originalLines.length||originalLines.some(function(l){return !l.code;}))throw new Error('Phiếu gốc thiếu mã chuẩn; không thể tự động đảo an toàn.');
+  const reverseOp=summary.operation==='OUT'?'IN':'OUT';
+  const reasonText=String(payload.reason||'').trim().slice(0,VOUCHER_ADJUST_CONFIG_V10131.MAX_REASON);
+  const userNote=String(payload.note||'').trim().slice(0,VOUCHER_ADJUST_CONFIG_V10131.MAX_NOTE);
+  const counterparty=String(payload.counterparty!=null?payload.counterparty:summary.counterparty).trim().slice(0,VOUCHER_ADJUST_CONFIG_V10131.MAX_COUNTERPARTY);
+  const reversalNote='['+action+' '+voucher+'] · REVERSAL'+(reasonText?' · Lý do: '+reasonText:'');
+  const slips=[{slipNo:'R1',operation:reverseOp,warehouse:warehouse,sourceWarehouse:'',destinationWarehouse:'',actor:actor,counterparty:summary.counterparty||actor,businessReason:(action==='VOID'?'Hoàn tác phiếu ':'Đảo phiếu để sửa ')+voucher,note:reversalNote,lines:originalLines.map(function(l){return {code:l.code,quantity:l.qty,itemText:l.code,sourceExcerpt:l.code};})}];
+  let replacementLines=[];
+  if(action==='CORRECT'){
+    const raw=Array.isArray(payload.lines)?payload.lines:[];
+    const map={};raw.forEach(function(l){const code=String(l&&l.code||'').trim().toUpperCase();if(code)map[code]=Math.max(0,Math.floor(toNumber_(l.qty)));});
+    const originalCodes=originalLines.map(function(l){return l.code;});
+    Object.keys(map).forEach(function(code){if(originalCodes.indexOf(code)<0)throw new Error('Không được đổi/thêm SKU khi sửa phiếu. Mã lạ: '+code);});
+    originalCodes.forEach(function(code){if(!Object.prototype.hasOwnProperty.call(map,code))throw new Error('Thiếu số lượng mới cho '+code+'.');});
+    replacementLines=originalLines.map(function(l){return {code:l.code,quantity:map[l.code],itemText:l.code,sourceExcerpt:l.code};}).filter(function(l){return l.quantity>0;});
+    if(!replacementLines.length)throw new Error('Nếu muốn đưa toàn bộ số lượng về 0, hãy dùng Hoàn tác phiếu.');
+    slips.push({slipNo:'C1',operation:summary.operation,warehouse:warehouse,sourceWarehouse:'',destinationWarehouse:'',actor:actor,counterparty:counterparty||actor,businessReason:reasonText||summary.reason||coreBusinessReasonV105_(summary.operation,counterparty,''),note:'[CORRECT '+voucher+'] · REPLACEMENT'+(userNote?' · Ghi chú: '+userNote:''),lines:replacementLines});
+  }else{
+    if(!reasonText)throw new Error('Vui lòng nhập lý do hoàn tác.');
+  }
+  const today=dateKey_(new Date());
+  try{
+    const preview=aiBuildBatchLivePreview_({transactionDate:today,command:action+' '+voucher,slips:slips});
+    preview.originalVoucher=voucher;preview.correctionType=action;preview.historicalGuard={originalVoucher:voucher,action:action};
+    preview.originalSummary=summary;preview.ruleSet=CORE_V105_CONFIG.RULESET_VERSION;preview.planVersion='VOUCHER_ADJUST_V1';
+    return inventoryVoucherStorePreviewV10131_(preview);
+  }catch(error){
+    if(error&&error.aiBlocked)return {ready:false,writeBlocked:true,source:'VOUCHER_ADJUSTMENT',originalVoucher:voucher,correctionType:action,exceptions:[error.aiBlocked],clarification:String(error.aiBlocked.message||'Không thể dựng bút toán bù.'),ruleSet:CORE_V105_CONFIG.RULESET_VERSION};
+    throw error;
+  }
+}
+function executeVoucherAdjustmentV10131(payload){
+  payload=payload||{};const previewId=String(payload.previewId||'').trim();if(!previewId)throw new Error('Thiếu preview điều chỉnh.');
+  const already=aiFindExecutedPreview_(previewId);if(already)return Object.assign({alreadyExecuted:true},already);
+  const raw=CacheService.getScriptCache().get(VOUCHER_ADJUST_CONFIG_V10131.CACHE_PREFIX+previewId);if(!raw)throw new Error('Preview đã hết hạn. Hãy kiểm tra thay đổi lại.');
+  let preview;try{preview=JSON.parse(raw);}catch(e){throw new Error('Preview điều chỉnh không hợp lệ.');}
+  if(!preview.ready||preview.source!=='VOUCHER_ADJUSTMENT'||!preview.historicalGuard)throw new Error('Preview chưa sẵn sàng.');
+  const actor=(preview.slips&&preview.slips[0]&&preview.slips[0].actor)||'';coreRequirePermissionV109_('ADJUST',actor,'executeVoucherAdjustmentV10131',preview.correctionType+' '+preview.originalVoucher);
+  try{
+    const result=aiExecuteBatchPreview_(preview);CacheService.getScriptCache().remove(VOUCHER_ADJUST_CONFIG_V10131.CACHE_PREFIX+previewId);clearDashboardCache();
+    return Object.assign({source:'VOUCHER_ADJUSTMENT',originalVoucher:preview.originalVoucher,correctionType:preview.correctionType},result);
+  }catch(error){throw new Error('CHƯA GHI ĐIỀU CHỈNH. '+String(error&&error.message||error));}
+}
+function voucherAdjustmentSelfTestV10131_(){
+  const life=inventoryVoucherLifecycleFromRowsV10131_('PXK-20261010-006',[
+    {voucher:'PXK-20261010-006',reason:'Xuất bán',note:'Thanh xuất'},
+    {voucher:'PNK-20261010-007',reason:'Hoàn tác',note:'[CORRECT PXK-20261010-006] · REVERSAL'},
+    {voucher:'PXK-20261010-008',reason:'Xuất bán',note:'[CORRECT PXK-20261010-006] · REPLACEMENT'}
+  ]);
+  const s58=inventoryVoucherSummaryV10130_({voucher:'PXK-20261010-006',rows:[{warehouse:'58',person:'TikTok',reason:'Gửi TikTok',note:'Thanh xuất; ghi thẳng sổ chính · Ghi chú: test',output:2}]});
+  const s145=inventoryVoucherSummaryV10130_({voucher:'PNK-20261010-009',rows:[{warehouse:'145',person:'Phong',reason:'Nhập hàng | Đối tượng: Đức Lan | Ghi chú: test | Tồn 1 → 3',note:'AI_V',input:2}]});
+  const t=[
+    {name:'lifecycle corrected',pass:life.status==='CORRECTED'&&life.relatedVouchers.length===2},
+    {name:'58 actor/counterparty',pass:s58.actor==='Thanh'&&s58.counterparty==='TikTok'},
+    {name:'145 actor/counterparty',pass:s145.actor==='Phong'&&s145.counterparty==='Đức Lan'},
+    {name:'reason extraction',pass:s145.reason==='Nhập hàng'},
+    {name:'note extraction',pass:s58.note==='test'&&s145.note==='test'}
+  ];
+  return {version:VOUCHER_ADJUST_CONFIG_V10131.VERSION,total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
+}
+
 function aiChatGetVoucherV1107_(voucherText, warehouse) {
   const ref=aiExtractVoucherRefV10108_(voucherText);
   warehouse=['58','145','all'].indexOf(String(warehouse))>=0?String(warehouse):'all';
@@ -5588,7 +5738,7 @@ function aiChatGetVoucherV1107_(voucherText, warehouse) {
     const data=getJournalHistory({warehouse:warehouse,query:voucher,allDates:true,limit:HISTORICAL_VOUCHER_CONFIG.MAX_VOUCHER_ROWS});
     const rows=(data.rows||[]).filter(function(r){return String(r.voucher||'').trim().toUpperCase()===voucher;});
     if(!rows.length) return {found:false,voucher:voucher,warehouse:warehouse,reason:'VOUCHER_NOT_FOUND',message:'Không tìm thấy đúng số phiếu '+voucher+'.'};
-    return {found:true,voucher:voucher,warehouse:warehouse,totalLines:rows.length,originalImmutable:true,correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,rows:rows.map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,type:r.type,input:r.input,output:r.output,before:r.before,after:r.after,person:r.person,reason:r.reason,note:r.note};})};
+    return {found:true,voucher:voucher,warehouse:warehouse,totalLines:rows.length,originalImmutable:true,correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,rows:rows.map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,unit:r.unit,type:r.type,input:r.input,output:r.output,before:r.before,after:r.after,person:r.person,reason:r.reason,note:r.note};})};
   }
 
   if(ref.kind==='SUFFIX') {
@@ -5602,7 +5752,7 @@ function aiChatGetVoucherV1107_(voucherText, warehouse) {
     const pool=todayVouchers.length?todayVouchers:vouchers;
     if(pool.length===1){
       const voucher=pool[0],rows=byVoucher[voucher];
-      return {found:true,resolvedFromShortRef:true,requestedRef:String(voucherText||''),voucher:voucher,warehouse:warehouse,totalLines:rows.length,originalImmutable:true,correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,rows:rows.map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,type:r.type,input:r.input,output:r.output,before:r.before,after:r.after,person:r.person,reason:r.reason,note:r.note};})};
+      return {found:true,resolvedFromShortRef:true,requestedRef:String(voucherText||''),voucher:voucher,warehouse:warehouse,totalLines:rows.length,originalImmutable:true,correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,rows:rows.map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,unit:r.unit,type:r.type,input:r.input,output:r.output,before:r.before,after:r.after,person:r.person,reason:r.reason,note:r.note};})};
     }
     if(pool.length>1){
       return {found:false,ambiguous:true,reason:'AMBIGUOUS_VOUCHER_SUFFIX',requestedRef:String(voucherText||''),suffix:ref.suffix,candidates:pool.slice(0,8),message:'Có '+pool.length+' phiếu khớp đuôi '+ref.suffix+'. Hãy chọn đúng số phiếu: '+pool.slice(0,5).join(', ')+'.'};
@@ -5614,7 +5764,7 @@ function aiChatGetVoucherV1107_(voucherText, warehouse) {
   const data=getJournalHistory({warehouse:warehouse,query:voucher,allDates:true,limit:HISTORICAL_VOUCHER_CONFIG.MAX_VOUCHER_ROWS});
   const rows=(data.rows||[]).filter(function(r){return String(r.voucher||'').trim().toUpperCase()===voucher;});
   if(!rows.length) return {found:false,voucher:voucher,warehouse:warehouse,reason:'VOUCHER_NOT_FOUND',message:'Không tìm thấy đúng số phiếu '+voucher+'.'};
-  return {found:true,voucher:voucher,warehouse:warehouse,totalLines:rows.length,originalImmutable:true,correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,rows:rows.map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,type:r.type,input:r.input,output:r.output,before:r.before,after:r.after,person:r.person,reason:r.reason,note:r.note};})};
+  return {found:true,voucher:voucher,warehouse:warehouse,totalLines:rows.length,originalImmutable:true,correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,rows:rows.map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,unit:r.unit,type:r.type,input:r.input,output:r.output,before:r.before,after:r.after,person:r.person,reason:r.reason,note:r.note};})};
 }
 
 function aiHistoricalVoucherSelfTestV1107_() {
@@ -5645,7 +5795,7 @@ function aiChatMovementsRangeV106_(query, warehouse, fromDate, toDate, limit) {
   const today=dateKey_(new Date());
   const from=String(fromDate||'').trim()||today,to=String(toDate||'').trim()||from;
   const data=getJournalHistory({warehouse:warehouse,query:String(query||''),fromDate:from,toDate:to,limit:Math.max(1,Math.min(AI_AGENT_CONFIG.MAX_MOVEMENT_ROWS,Number(limit||40)))});
-  return {fromDate:from,toDate:to,warehouse:warehouse,totalMatches:data.totalMatches,rows:(data.rows||[]).slice(0,AI_AGENT_CONFIG.MAX_MOVEMENT_ROWS).map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,type:r.type,input:r.input,output:r.output,before:r.before,after:r.after,person:r.person,reason:r.reason};})};
+  return {fromDate:from,toDate:to,warehouse:warehouse,totalMatches:data.totalMatches,rows:(data.rows||[]).slice(0,AI_AGENT_CONFIG.MAX_MOVEMENT_ROWS).map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,unit:r.unit,type:r.type,input:r.input,output:r.output,before:r.before,after:r.after,person:r.person,reason:r.reason};})};
 }
 
 function aiChatOperationalReportV106_(warehouse) {
@@ -5708,7 +5858,7 @@ function aiChatTodayMovements_(query, warehouse) {
   return {
     date:today,
     totalMatches:data.totalMatches,
-    rows:(data.rows||[]).slice(0,40).map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,type:r.type,input:r.input,output:r.output,person:r.person,reason:r.reason};})
+    rows:(data.rows||[]).slice(0,40).map(function(r){return {date:r.date,voucher:r.voucher,warehouse:r.warehouse,code:r.code,name:r.name,unit:r.unit,type:r.type,input:r.input,output:r.output,person:r.person,reason:r.reason};})
   };
 }
 
