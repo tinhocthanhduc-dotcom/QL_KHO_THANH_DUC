@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.18.0</title>
+<title>QL KHO THÀNH ĐỨC · V10.18.1</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -381,7 +381,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 @media(max-width:1200px){.voucher-center-controls{grid-template-columns:repeat(3,minmax(0,1fr))}.voucher-center-controls input{grid-column:1/-1}.vc-report-grid{grid-template-columns:1fr}}
 @media(max-width:800px){.voucher-center-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.vc-flow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.voucher-center-controls{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.voucher-center-kpis,.vc-flow-kpis,.voucher-center-controls{grid-template-columns:1fr}}
-/* V10.18.0 Stage 6 print preview */
+/* V10.18.1 Stage 6 print preview */
 .voucher-print-preview-modal{width:min(1000px,96vw);max-height:94vh;display:flex;flex-direction:column;overflow:hidden;padding:0}
 .voucher-print-preview-header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid #e4e7ec}
 .voucher-print-preview-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid #e4e7ec}
@@ -393,6 +393,62 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 .voucher-print-preview-body.a5 .voucher-batch-page,.voucher-print-preview-body.a5 .voucher-print-sheet{max-width:148mm}
 .voucher-print-preview-body .voucher-batch-page>.voucher-print-sheet{max-width:none;box-shadow:none}
 @media print{#voucherPrintPreviewBack{display:none!important}#voucherPrintArea{width:100%!important;position:absolute!important;top:0!important;left:0!important}.voucher-print-sheet{padding:1mm 2mm!important}.voucher-print-table tr{break-inside:avoid;page-break-inside:avoid}.voucher-print-sign{break-inside:avoid;page-break-inside:avoid}body{margin:0!important}}
+/* V10.18.1 · Printed voucher with company identity. Scoped to tdp- only. */
+.voucher-print-preview-body{overflow:auto;align-items:center}
+.voucher-print-preview-body .voucher-print-sheet,.voucher-print-preview-body .voucher-batch-page{width:100%;max-width:190mm;min-width:0}
+.voucher-print-preview-body.a5 .voucher-print-sheet,.voucher-print-preview-body.a5 .voucher-batch-page{max-width:128mm;min-width:0}
+.tdp-sheet{box-sizing:border-box!important;width:100%!important;max-width:100%!important;padding:10mm 8mm!important;color:#17263c;font-family:Arial,sans-serif;overflow-wrap:anywhere;background:white}
+.tdp-company{display:flex;align-items:center;gap:12px;padding-bottom:9px;border-bottom:2px solid #0b9bcf}
+.tdp-logo{width:28mm;height:29mm;object-fit:contain;flex:0 0 28mm}
+.tdp-company-text{min-width:0;flex:1}
+.tdp-company-text h3{font-size:13px;line-height:1.32;color:#c91323;margin:0 0 7px;font-weight:800}
+.tdp-company-text p{font-size:10px;line-height:1.48;margin:3px 0}
+.tdp-heading{text-align:center;padding:17px 0 14px}
+.tdp-heading h2{font-size:24px;line-height:1.3;letter-spacing:.6px;color:#047db9;margin:0;font-weight:850}
+.tdp-voucher-id{font-size:11px;background:#edf7ff;color:#154b77;border-radius:6px;padding:7px 11px;display:inline-block;margin-top:8px}
+.tdp-meta{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #cde9fa;background:#f5fbff;border-radius:8px;margin:0 0 14px;padding:10px}
+.tdp-meta>div:first-child{padding-right:12px;border-right:1px solid #cde9fa}
+.tdp-meta>div:last-child{padding-left:12px}
+.tdp-field{display:grid;grid-template-columns:38% 1fr;gap:6px;padding:5px 0;border-bottom:1px solid #e0eef6;font-size:10px;line-height:1.4}
+.tdp-field:last-child{border-bottom:0}
+.tdp-field span{color:#527086}
+.tdp-field strong{font-weight:700;color:#12293e}
+.tdp-table{table-layout:fixed;width:100%;border-collapse:collapse;font-size:10px}
+.tdp-table th{background:#078bc5;color:white;font-weight:700;border:1px solid #86c5e6;padding:9px 5px}
+.tdp-table td{border:1px solid #bad6e7;padding:9px 6px;line-height:1.4;vertical-align:middle;overflow-wrap:anywhere}
+.tdp-table tbody tr:nth-child(even){background:#f3faff}
+.tdp-center{text-align:center;white-space:normal}
+.tdp-signatures{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0 23px;text-align:center;break-inside:avoid}
+.tdp-signatures>div{min-height:95px;display:flex;flex-direction:column;justify-content:space-between;font-size:11px}
+.tdp-signatures b{color:#143954}
+.tdp-signatures span{display:block;border-top:1px dotted #94a3b8;padding-top:6px;font-size:9px;color:#64748b;font-style:italic}
+.tdp-footer{font-size:9px;color:#627387;border-top:1px dashed #bdd7e8;padding:10px 0 4px;display:flex;justify-content:space-between;gap:10px;border-bottom:5px solid #0b94ce}
+.voucher-print-preview-body.a5 .tdp-sheet,#voucherPrintArea.a5 .tdp-sheet{padding:6mm 5mm!important}
+.voucher-print-preview-body.a5 .tdp-logo,#voucherPrintArea.a5 .tdp-logo{width:17mm;height:20mm;flex-basis:17mm}
+.voucher-print-preview-body.a5 .tdp-company,#voucherPrintArea.a5 .tdp-company{gap:7px;padding-bottom:6px}
+.voucher-print-preview-body.a5 .tdp-company-text h3,#voucherPrintArea.a5 .tdp-company-text h3{font-size:9px;margin-bottom:3px}
+.voucher-print-preview-body.a5 .tdp-company-text p,#voucherPrintArea.a5 .tdp-company-text p{font-size:7px;line-height:1.3}
+.voucher-print-preview-body.a5 .tdp-heading,#voucherPrintArea.a5 .tdp-heading{padding:9px 0}
+.voucher-print-preview-body.a5 .tdp-heading h2,#voucherPrintArea.a5 .tdp-heading h2{font-size:18px}
+.voucher-print-preview-body.a5 .tdp-voucher-id,#voucherPrintArea.a5 .tdp-voucher-id{font-size:9px;padding:5px 8px;margin-top:4px}
+.voucher-print-preview-body.a5 .tdp-meta,#voucherPrintArea.a5 .tdp-meta{padding:6px;gap:0;margin-bottom:8px}
+.voucher-print-preview-body.a5 .tdp-meta>div:first-child,#voucherPrintArea.a5 .tdp-meta>div:first-child{padding-right:5px}
+.voucher-print-preview-body.a5 .tdp-meta>div:last-child,#voucherPrintArea.a5 .tdp-meta>div:last-child{padding-left:5px}
+.voucher-print-preview-body.a5 .tdp-field,#voucherPrintArea.a5 .tdp-field{font-size:8px;gap:3px;padding:3px 0}
+.voucher-print-preview-body.a5 .tdp-table,#voucherPrintArea.a5 .tdp-table{font-size:8px}
+.voucher-print-preview-body.a5 .tdp-table th,.voucher-print-preview-body.a5 .tdp-table td,#voucherPrintArea.a5 .tdp-table th,#voucherPrintArea.a5 .tdp-table td{padding:5px 3px}
+.voucher-print-preview-body.a5 .tdp-signatures,#voucherPrintArea.a5 .tdp-signatures{gap:5px;margin:13px 0}
+.voucher-print-preview-body.a5 .tdp-signatures>div,#voucherPrintArea.a5 .tdp-signatures>div{min-height:62px;font-size:9px}
+.voucher-print-preview-body.a5 .tdp-signatures span,#voucherPrintArea.a5 .tdp-signatures span{font-size:7px}
+.voucher-print-preview-body.a5 .tdp-footer,#voucherPrintArea.a5 .tdp-footer{font-size:7px;padding-top:6px;border-bottom-width:3px}
+@media print{
+  #voucherPrintArea .tdp-sheet{padding:0!important;margin:0!important;box-shadow:none!important;max-width:none!important}
+  #voucherPrintArea.a5 .tdp-sheet{padding:0!important}
+  .tdp-table thead{display:table-header-group}
+  .tdp-table tr{break-inside:avoid;page-break-inside:avoid}
+  .tdp-signatures{break-inside:avoid;page-break-inside:avoid}
+  .tdp-table th,.tdp-table td,.tdp-meta{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style>
 </head>
 <body>
@@ -762,7 +818,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.18.0";
+let APP_VERSION="V10.18.1";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
@@ -1116,20 +1172,38 @@ function openVoucherDetail(voucher){
   }).withFailureHandler(function(e){$("voucherStatus").textContent="LỖI";$("voucherStatus").className="badge out";$("voucherLoading").textContent="Không tải được phiếu: "+errMsg(e)}).getInventoryVoucherDetail({voucher:voucher})
 }
 function closeVoucherDetail(){$("voucherBack").classList.remove("open");voucherDetail=null}
+const TD_PRINT_LOGO_V10181="data:image/jpeg;base64,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";
 function buildVoucherPrintHtml(data){
-  var rows=data.rows||[],qty=data.totalQty||0,isTransfer=data.operation==="TRANSFER";
-  var info='<div class="voucher-print-info"><div>Ngày: <strong>'+esc(data.date||"")+'</strong></div><div>'+(isTransfer?'Hướng':'Kho')+': <strong>'+esc(data.warehouseLabel||"")+'</strong></div><div>Đối tượng: <strong>'+esc(data.counterparty||"—")+'</strong></div><div>Người thực hiện: <strong>'+esc(data.actor||"—")+'</strong></div><div>Lý do: <strong>'+esc(data.reason||"—")+'</strong></div><div>Tổng số lượng: <strong>'+fmt(qty)+'</strong></div></div>';
-  var table=isTransfer?
-    '<table class="voucher-print-table"><thead><tr><th>STT</th><th>Mã</th><th>Hàng hóa</th><th>ĐVT</th><th>Hướng</th><th>SL</th></tr></thead><tbody>'+rows.map(function(r,i){return '<tr><td style="text-align:center">'+(i+1)+'</td><td>'+esc(r.code||"")+'</td><td>'+esc(r.name||"")+'</td><td>'+esc(r.unit||"")+'</td><td>Kho '+esc(r.sourceWarehouse||"")+' → Kho '+esc(r.destinationWarehouse||"")+'</td><td style="text-align:right">'+fmt(Math.max(Number(r.input||0),Number(r.output||0)))+'</td></tr>'}).join("")+'</tbody></table>':
-    '<table class="voucher-print-table"><thead><tr><th>STT</th><th>Mã</th><th>Hàng hóa</th><th>ĐVT</th><th>Kho</th><th>SL</th></tr></thead><tbody>'+rows.map(function(r,i){return '<tr><td style="text-align:center">'+(i+1)+'</td><td>'+esc(r.code||"")+'</td><td>'+esc(r.name||"")+'</td><td>'+esc(r.unit||"")+'</td><td style="text-align:center">'+esc(r.warehouse||"")+'</td><td style="text-align:right">'+fmt(Math.max(Number(r.input||0),Number(r.output||0)))+'</td></tr>'}).join("")+'</tbody></table>';
-  return '<div class="voucher-print-sheet"><div class="voucher-print-title"><h1>QL KHO THÀNH ĐỨC</h1><h2>'+esc(data.operationLabel||"PHIẾU KHO")+'</h2><p>Số: <strong>'+esc(data.voucher||"")+'</strong></p></div>'+info+table+
-    '<div class="voucher-print-sign"><div><strong>Người lập phiếu</strong>Ký, ghi rõ họ tên</div><div><strong>Người giao / nhận</strong>Ký, ghi rõ họ tên</div><div><strong>Người nhận hàng</strong>Ký, ghi rõ họ tên</div></div><div class="voucher-print-footer">In từ QL KHO THÀNH ĐỨC · '+esc(APP_VERSION)+'</div></div>'
+  data=data||{};
+  const rows=Array.isArray(data.rows)?data.rows:[],type=String(data.operation||"").toUpperCase();
+  const isTransfer=type==="TRANSFER",isCount=type==="ADJUST",isIn=type==="IN",total=Number(data.totalQty||0);
+  const name=isTransfer?"PHIẾU ĐIỀU CHUYỂN KHO":isCount?"PHIẾU KIỂM KHO":isIn?"PHIẾU NHẬP KHO":"PHIẾU XUẤT KHO";
+  const field=(k,v)=>'<div class="tdp-field"><span>'+esc(k)+'</span><strong>'+esc(String(v==null||v===""?"—":v))+'</strong></div>';
+  const source=isTransfer?'Kho '+String(data.sourceWarehouse||"")+' → Kho '+String(data.destinationWarehouse||""):data.warehouseLabel||data.warehouses&&data.warehouses.join(", ")||"";
+  const left=field("Số phiếu",data.voucher)+field("Ngày",data.date)+field(isTransfer?"Hướng điều chuyển":"Kho",source)+field("Đối tượng",data.counterparty);
+  const right=field("Người thực hiện",data.actor)+field("Lý do",data.reason)+field(isCount?"Số dòng kiểm kê":"Tổng số lượng",isCount?rows.length:fmt(total));
+  const cols=isCount?['STT','MÃ HÀNG','HÀNG HÓA','ĐVT','TRƯỚC','KIỂM KÊ','LỆCH']:isTransfer?['STT','MÃ HÀNG','HÀNG HÓA','ĐVT','SL']:['STT','MÃ HÀNG','HÀNG HÓA','ĐVT','SL'];
+  const tableRows=rows.map(function(r,i){
+    let cells=[i+1,r.code||"",r.name||"",r.unit||""];
+    if(isCount){const a=Number(r.before||0),b=Number(r.after||0);cells.push(fmt(a),fmt(b),(b-a>0?"+":"")+fmt(b-a));}
+    else if(isTransfer)cells.push(fmt(Math.max(Number(r.input||0),Number(r.output||0))));
+    else cells.push(fmt(isIn?Number(r.input||0):Number(r.output||0)));
+    return '<tr>'+cells.map((v,j)=>'<td class="'+(j===0||j>=4?"tdp-center":"")+'">'+esc(String(v))+'</td>').join("")+'</tr>';
+  }).join("");
+  const company='<header class="tdp-company"><img class="tdp-logo" src="'+TD_PRINT_LOGO_V10181+'" alt="Thành Đức"><div class="tdp-company-text"><h3>CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TIN HỌC THÀNH ĐỨC</h3><p>Số 58 Đường Mã Lò, Phường Bình Trị Đông, Thành phố Hồ Chí Minh</p><p><b>MST:</b> 0313015734 &nbsp; | &nbsp; <b>Tel:</b> 028 6266 1869 &nbsp; | &nbsp; <b>Hotline:</b> 0888 304 668</p></div></header>';
+  const heading='<div class="tdp-heading"><h2>'+esc(name)+'</h2><div class="tdp-voucher-id">Số: <strong>'+esc(data.voucher||"")+'</strong></div></div>';
+  const meta='<section class="tdp-meta"><div>'+left+'</div><div>'+right+'</div></section>';
+  const table='<table class="tdp-table"><colgroup>'+(isCount?'<col style="width:7%"><col style="width:15%"><col><col style="width:9%"><col style="width:10%"><col style="width:11%"><col style="width:9%">':'<col style="width:8%"><col style="width:17%"><col><col style="width:10%"><col style="width:10%">')+'</colgroup><thead><tr>'+cols.map(c=>'<th>'+c+'</th>').join("")+'</tr></thead><tbody>'+tableRows+'</tbody></table>';
+  const signatures='<div class="tdp-signatures"><div><b>Người lập phiếu</b><span>Ký, ghi rõ họ tên</span></div><div><b>'+(isTransfer?'Người giao hàng':'Người giao / nhận')+'</b><span>Ký, ghi rõ họ tên</span></div><div><b>Người nhận hàng</b><span>Ký, ghi rõ họ tên</span></div></div>';
+  const footer='<footer class="tdp-footer"><span>In từ QL KHO THÀNH ĐỨC · '+esc(APP_VERSION)+'</span><span>Chứng từ nội bộ · '+esc(data.voucher||"")+'</span></footer>';
+  return '<div class="voucher-print-sheet tdp-sheet">'+company+heading+meta+table+signatures+footer+'</div>';
 }
 function setVoucherPrintPaper(size){
   size=size==="A5"?"A5":"A4";
   $("voucherPaperSize").value=size;
   $("voucherPrintPageRule").textContent="@page{size:"+size+" portrait;margin:10mm}";
   $("voucherPrintPreviewBody").classList.toggle("a5",size==="A5");
+  $("voucherPrintArea").classList.toggle("a5",size==="A5");
 }
 function closeVoucherPrintPreview(){$("voucherPrintPreviewBack").classList.remove("open")}
 function openVoucherPrintPreview(count){
