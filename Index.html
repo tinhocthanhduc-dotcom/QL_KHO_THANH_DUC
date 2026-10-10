@@ -1355,7 +1355,7 @@ function ioCopyVoucherToDraft(){
   if(ioDraft.lines.length&&!window.confirm("Thay bản nháp hiện tại bằng phiếu sao chép?"))return;
   ioDraft.mode=d.operation;ioDraft.warehouse=wh;ioDraft.date=todayIso();ioDraft.counterparty=d.counterparty||"";ioDraft.person=currentActor()||"";ioDraft.reason=d.reason||"";ioDraft.note="Sao chép từ "+d.voucher;ioDraft.lines=lines;
   ioApplyDraftToForm();ioRenderCart();ioInvalidateServerPreview("Cần xem trước");$("ioPreviewBody").innerHTML="Bản sao chỉ là nháp, chưa ghi kho. Kiểm tra thông tin và xem trước để lấy tồn live.";
-  closeVoucherDetail();document.querySelector('[data-tab="io"]')?.click();$("ioSearch").focus();toast("Đã sao chép "+d.voucher+" thành phiếu nháp · chưa ghi kho");
+  closeVoucherDetail();showTab("inout");$("ioSearch").focus();toast("Đã sao chép "+d.voucher+" thành phiếu nháp · chưa ghi kho");
 }
 function ioFindMaster(code){return state.combined.find(function(x){return norm(x.code)===norm(code)})}
 function ioSearchItems(){var box=$("ioSearchResults"),input=$("ioSearch");if(!box||!input)return;var q=norm(input.value);if(!q){box.classList.remove("open");box.innerHTML="";return}var rows=state.combined.filter(function(x){return norm(x.code)===q||String(x.searchText||"").indexOf(q)>=0});rows.sort(function(a,b){var ae=norm(a.code)===q?0:1,be=norm(b.code)===q?0:1;return ae-be||String(a.name).localeCompare(String(b.name),"vi")});rows=rows.slice(0,10);box.innerHTML=rows.map(function(x){var qty=ioDraft.warehouse==="145"?x.qty145:x.qty58;var mapWarn=ioDraft.warehouse==="145"&&Number(x.mappingCount||0)!==1?'<span class="badge warn">Chưa map chuẩn</span>':"";return '<div class="io-search-item" data-io-add="'+esc(x.code)+'"><div class="io-search-code">'+esc(x.code)+'</div><div class="io-search-name"><strong>'+esc(x.name)+'</strong><span class="note">'+esc(unitOf(x.code,x.name,x.unit))+' '+mapWarn+'</span></div><div class="io-search-stock">Tồn kho '+esc(ioDraft.warehouse)+': <strong>'+fmt(qty)+'</strong></div></div>'}).join("")||'<div class="io-preview-empty">Không tìm thấy mặt hàng phù hợp.</div>';box.classList.add("open")}
@@ -1518,7 +1518,7 @@ function bindIoModule(){
   $("ioFocusSearch").onclick=function(){$("ioSearch").focus();$("ioSearch").scrollIntoView({block:"center",behavior:"smooth"})};
   $("ioSearch").addEventListener("input",ioSearchItems);
   $("voucherCopy").onclick=ioCopyVoucherToDraft;
-  document.addEventListener("keydown",function(e){if(!(e.ctrlKey||e.metaKey)||!e.shiftKey||e.key.toLowerCase()!=="f"||!document.querySelector('[data-tab="io"]')?.classList.contains("active"))return;e.preventDefault();$("ioSearch").focus();$("ioSearch").select()});
+  document.addEventListener("keydown",function(e){if(!(e.ctrlKey||e.metaKey)||!e.shiftKey||e.key.toLowerCase()!=="f"||!document.querySelector('[data-tab="inout"]')?.classList.contains("active"))return;e.preventDefault();$("ioSearch").focus();$("ioSearch").select()});
   $("ioSearch").addEventListener("keydown",function(e){
     if(e.key!=="Enter")return;
     var raw=String($("ioSearch").value||"").trim(),direct=ioFindMaster(raw);if(direct){e.preventDefault();ioAddLine(direct.code);return}var rows=$("ioSearchResults").querySelectorAll("[data-io-add]");
