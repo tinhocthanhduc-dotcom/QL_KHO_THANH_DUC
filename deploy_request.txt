@@ -1,5 +1,5 @@
-Production hotfix for direct voucher printing.
-Version: V10.18.1 (print hotfix, no feature rollback)
-Source branch: dev-v10.10.6
-Scope: Direct Chrome print dialog; eliminate blank print pages and unexpected scaling.
-Run full syntax and regression checks.
+Production UI deploy request
+Version: V10.18.1
+Change: Remove 'Phát sinh tạm' navigation tab only; preserve backend and historic data
+Branch: dev-v10.10.6
+Run syntax and regression checks.
