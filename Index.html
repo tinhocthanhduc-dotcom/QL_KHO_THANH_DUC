@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.15.2</title>
+<title>QL KHO THÀNH ĐỨC · V10.15.3</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -741,7 +741,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.15.2";
+let APP_VERSION="V10.15.3";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
@@ -1106,7 +1106,7 @@ function buildVoucherPrintHtml(data){
 }
 function printVoucherDetail(){if(!voucherDetail)return toast("Chưa có phiếu để in");$("voucherPrintArea").innerHTML=buildVoucherPrintHtml(voucherDetail);window.print()}
 function voucherEditableLines(){
-  var by={},order=[];(voucherDetail&&voucherDetail.rows||[]).forEach(function(r){var code=String(r.code||"").trim().toUpperCase(),qty=Math.max(Number(r.input||0),Number(r.output||0));if(!code||qty<=0)return;if(!by[code]){by[code]={code:code,name:r.name||"",qty:0};order.push(code)}by[code].qty+=qty});return order.map(function(code){return by[code]})
+  var by={},order=[],isCount=voucherDetail&&voucherDetail.operation==="ADJUST";(voucherDetail&&voucherDetail.rows||[]).forEach(function(r){var code=String(r.code||"").trim().toUpperCase(),qty=isCount?Number(r.after):Math.max(Number(r.input||0),Number(r.output||0));if(!code||!Number.isSafeInteger(qty)||qty<0||(!isCount&&qty===0))return;if(!by[code]){by[code]={code:code,name:r.name||"",qty:0};order.push(code)}if(isCount&&by[code].qty!==0)throw new Error("Phiếu KK có mã trùng");by[code].qty+=qty});return order.map(function(code){return by[code]})
 }
 function voucherActionInvalidate(){
   voucherAction.preview=null;$("voucherActionCommit").disabled=true;$("voucherActionPreview").classList.remove("open");$("voucherActionPreview").innerHTML=""
@@ -1133,7 +1133,7 @@ function openVoucherAction(mode){
   $("voucherActionNoteWrap").style.display=isVoid?"none":"flex";
   var lines=voucherEditableLines();
   $("voucherEditLines").style.display=isVoid?"none":"block";
-  $("voucherEditLines").innerHTML=isVoid?"":lines.map(function(l){return '<div class="voucher-edit-row"><div class="voucher-edit-name"><strong>'+esc(l.code)+' · '+esc(l.name)+'</strong><span>Số lượng gốc: '+fmt(l.qty)+'</span></div><div class="voucher-edit-qty"><button class="io-step" type="button" data-vadj-step="'+esc(l.code)+'" data-delta="-1">−</button><input data-vadj-qty="'+esc(l.code)+'" inputmode="numeric" value="'+String(l.qty)+'"><button class="io-step" type="button" data-vadj-step="'+esc(l.code)+'" data-delta="1">＋</button></div></div>'}).join("");
+  $("voucherEditLines").innerHTML=isVoid?"":lines.map(function(l){return '<div class="voucher-edit-row"><div class="voucher-edit-name"><strong>'+esc(l.code)+' · '+esc(l.name)+'</strong><span>'+(voucherDetail.operation==="ADJUST"?"Tồn đã kiểm kê: ":"Số lượng gốc: ")+fmt(l.qty)+'</span></div><div class="voucher-edit-qty"><button class="io-step" type="button" data-vadj-step="'+esc(l.code)+'" data-delta="-1">−</button><input data-vadj-qty="'+esc(l.code)+'" inputmode="numeric" value="'+String(l.qty)+'"><button class="io-step" type="button" data-vadj-step="'+esc(l.code)+'" data-delta="1">＋</button></div></div>'}).join("");
   $("voucherActionCheck").disabled=false;$("voucherActionCheck").textContent="Kiểm tra thay đổi";$("voucherActionCommit").disabled=true;$("voucherActionCommit").textContent=isVoid?"Xác nhận hoàn tác":"Xác nhận sửa phiếu";
   $("voucherActionPreview").classList.remove("open");$("voucherActionPreview").innerHTML="";
   $("voucherActionBack").classList.add("open");requestAnimationFrame(function(){$("voucherActionActor").focus()})
