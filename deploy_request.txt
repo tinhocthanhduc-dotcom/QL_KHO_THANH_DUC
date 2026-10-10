@@ -1,5 +1,5 @@
 Production deploy request
-Version: V10.18.0
-Stage 8: AI preview to editable IN/OUT draft, never auto-write
+Version: V10.18.1
+Voucher A4/A5 professional Thành Đức logo + company info print layout
 Branch: dev-v10.10.6
-Run syntax and full regression before deployment.
+Run syntax checks and all regression suites before deployment.
