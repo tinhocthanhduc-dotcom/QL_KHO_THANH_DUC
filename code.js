@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.12.1';
+const APP_VERSION = 'V10.12.2';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -2691,6 +2691,10 @@ function coreBusinessReasonV105_(operation, counterparty, note) {
   if (op==='ADJUST') return 'Kiểm kho';
   if (op==='IN') {
     if (/chuyen tu kho|nhap chuyen kho/.test(n)) return 'Nhập chuyển kho';
+    if (/khach tra hang/.test(n)) return 'Khách trả hàng';
+    if (/nhap bo sung/.test(n)) return 'Nhập bổ sung';
+    if (/dieu chinh nhap/.test(n)) return 'Điều chỉnh nhập';
+    if (/ly do khac/.test(n)) return 'Khác';
     return 'Nhập hàng';
   }
   if (op==='OUT') {
@@ -2699,6 +2703,10 @@ function coreBusinessReasonV105_(operation, counterparty, note) {
     if (/inkviet/.test(n)) return 'Đóng INKVIET';
     if (/gui xe|nha xe|chanh xe/.test(n)) return 'Gửi xe';
     if (/chuyen qua kho|chuyen kho/.test(n)) return 'Chuyển qua kho';
+    if (/su dung noi bo/.test(n)) return 'Sử dụng nội bộ';
+    if (/bao hanh|doi hang/.test(n)) return 'Bảo hành / đổi hàng';
+    if (/giao khach/.test(n)) return 'Giao khách';
+    if (/ly do khac/.test(n)) return 'Khác';
     return 'Xuất bán';
   }
   return String(note||'').trim() || 'Nghiệp vụ kho';
@@ -3498,6 +3506,127 @@ function nextTransferSequence_(dateStamp, ss58, ss145, transferSheet) {
 // QL KHO THÀNH ĐỨC · V10.10.1 MODULAR REFACTOR
 // Module: 40_AI_Inventory.gs
 // Logic preserved from V10.9.0; no intentional business-rule changes.
+
+
+const MANUAL_INVENTORY_CONFIG_V10122 = Object.freeze({
+  VERSION:'MANUAL_INVENTORY_V1_2026-10-10',
+  PREVIEW_CACHE_PREFIX:'MANUAL_PREVIEW_',
+  MAX_LINES:100,
+  MAX_NOTE:500,
+  MAX_COUNTERPARTY:160,
+  MAX_REASON:120
+});
+
+function manualNormalizeInventoryPayloadV10122_(payload) {
+  payload=payload||{};
+  const op=String(payload.operation||'').trim().toUpperCase();
+  const warehouse=String(payload.warehouse||'58')==='145'?'145':'58';
+  const transactionDate=String(payload.transactionDate||payload.date||'').trim();
+  const actor=String(payload.actor||payload.person||'').trim();
+  const counterparty=String(payload.counterparty||'').trim().slice(0,MANUAL_INVENTORY_CONFIG_V10122.MAX_COUNTERPARTY);
+  const reason=String(payload.reason||'').trim().slice(0,MANUAL_INVENTORY_CONFIG_V10122.MAX_REASON);
+  const note=String(payload.note||'').trim().slice(0,MANUAL_INVENTORY_CONFIG_V10122.MAX_NOTE);
+  const raw=Array.isArray(payload.lines)?payload.lines.slice(0,MANUAL_INVENTORY_CONFIG_V10122.MAX_LINES):[];
+  const byCode={},order=[];
+  raw.forEach(function(line){
+    const code=String(line&&line.code||'').trim().toUpperCase();
+    const qty=Math.floor(toNumber_(line&&line.qty));
+    if(!code||qty<=0)return;
+    if(!byCode[code]){byCode[code]={code:code,qty:0};order.push(code);}
+    byCode[code].qty+=qty;
+  });
+  return {operation:op,warehouse:warehouse,transactionDate:transactionDate,actor:actor,counterparty:counterparty,reason:reason,note:note,lines:order.map(function(code){return byCode[code];})};
+}
+
+function manualReasonNoteV10122_(reason,note) {
+  const parts=[];
+  if(String(reason||'').trim())parts.push('Lý do: '+String(reason).trim());
+  if(String(note||'').trim())parts.push('Ghi chú: '+String(note).trim());
+  return parts.join(' · ');
+}
+
+function manualStoreReadyPreviewV10122_(preview, req) {
+  const previewId=Utilities.getUuid();
+  preview.previewId=previewId;
+  preview.model='MANUAL_FORM';
+  preview.source='MANUAL_FORM';
+  preview.manualReason=req.reason;
+  preview.manualNote=req.note;
+  preview.command='FORM '+req.operation+' KHO '+req.warehouse+' · '+req.counterparty+' · '+req.reason;
+  preview.createdAt=Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss');
+  CacheService.getScriptCache().put(MANUAL_INVENTORY_CONFIG_V10122.PREVIEW_CACHE_PREFIX+previewId,JSON.stringify(preview),AI_CONFIG.PREVIEW_TTL_SECONDS);
+  aiAudit_({previewId:previewId,command:preview.command,operation:'MANUAL_'+req.operation,warehouse:req.warehouse,actor:req.actor,status:'MANUAL_PREVIEW',result:JSON.stringify({transactionDate:preview.transactionDate,lineCount:preview.lineCount,totalQty:preview.totalQty,reason:req.reason}),model:'MANUAL_FORM'});
+  return preview;
+}
+
+function prepareManualInventoryPreview(payload) {
+  const req=manualNormalizeInventoryPayloadV10122_(payload);
+  if(['IN','OUT'].indexOf(req.operation)<0)throw new Error('Form Nhập/Xuất chỉ chấp nhận nghiệp vụ IN hoặc OUT.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(req.transactionDate)||!aiNormalizeDateKey_(req.transactionDate))throw new Error('Ngày phiếu không hợp lệ.');
+  if(!req.actor)throw new Error('Thiếu người thực hiện.');
+  if(!req.counterparty)throw new Error(req.operation==='IN'?'Thiếu nhà cung cấp / nguồn nhập.':'Thiếu khách hàng / đối tượng nhận.');
+  if(!req.reason)throw new Error('Thiếu lý do nghiệp vụ.');
+  if(!req.lines.length)throw new Error('Phiếu chưa có mặt hàng với số lượng hợp lệ.');
+  const permission=req.operation==='IN'?'INVENTORY_IN':'INVENTORY_OUT';
+  coreRequirePermissionV109_(permission,req.actor,'prepareManualInventoryPreview',req.operation+' Kho '+req.warehouse);
+  const slip={
+    slipNo:'1',operation:req.operation,warehouse:req.warehouse,sourceWarehouse:'',destinationWarehouse:'',
+    actor:req.actor,counterparty:req.counterparty,note:manualReasonNoteV10122_(req.reason,req.note),
+    lines:req.lines.map(function(line){return {code:line.code,quantity:line.qty,itemText:line.code,sourceExcerpt:line.code};})
+  };
+  try{
+    const preview=aiBuildBatchLivePreview_({transactionDate:req.transactionDate,command:'MANUAL_FORM',slips:[slip]});
+    preview.planVersion='MANUAL_FORM_V1';
+    preview.ruleSet=CORE_V105_CONFIG.RULESET_VERSION;
+    preview.manualReason=req.reason;
+    preview.manualNote=req.note;
+    return manualStoreReadyPreviewV10122_(preview,req);
+  }catch(error){
+    if(error&&error.aiBlocked){
+      const ex=error.aiBlocked;
+      coreLogRuleAuditV105_({ruleId:ex.ruleId||'R49',result:'BLOCKED',refId:'MANUAL_FORM',slipNo:ex.slipNo||'1',code:ex.code||'',message:ex.message||ex.type||'',actor:req.actor,metadata:{source:'MANUAL_FORM',type:ex.type||''}});
+      return {ready:false,writeBlocked:true,source:'MANUAL_FORM',transactionDate:req.transactionDate,transactionDateDisplay:aiDisplayDateKey_(req.transactionDate),exceptions:[ex],clarification:String(ex.message||'Phiếu chưa đủ điều kiện ghi kho.'),ruleSet:CORE_V105_CONFIG.RULESET_VERSION};
+    }
+    throw error;
+  }
+}
+
+function executeManualInventoryPreview(payload) {
+  payload=payload||{};
+  const previewId=String(payload.previewId||'').trim();
+  if(!previewId)throw new Error('Thiếu mã preview của phiếu.');
+  const already=aiFindExecutedPreview_(previewId);
+  if(already)return Object.assign({alreadyExecuted:true},already);
+  const cached=CacheService.getScriptCache().get(MANUAL_INVENTORY_CONFIG_V10122.PREVIEW_CACHE_PREFIX+previewId);
+  if(!cached)throw new Error('Bản xem trước đã hết hạn hoặc phiếu đã thay đổi. Hãy Xem trước phiếu lại.');
+  let preview;
+  try{preview=JSON.parse(cached);}catch(e){throw new Error('Preview phiếu không hợp lệ.');}
+  if(!preview.ready||preview.source!=='MANUAL_FORM'||!Array.isArray(preview.slips)||!preview.slips.length)throw new Error('Preview chưa sẵn sàng để ghi.');
+  preview.slips.forEach(function(slip){
+    const op=String(slip.operation||'').toUpperCase(),permission=op==='IN'?'INVENTORY_IN':'INVENTORY_OUT';
+    coreRequirePermissionV109_(permission,slip.actor||'','executeManualInventoryPreview','Phiếu thủ công '+op+' Kho '+slip.warehouse);
+  });
+  try{
+    const result=aiExecuteBatchPreview_(preview);
+    CacheService.getScriptCache().remove(MANUAL_INVENTORY_CONFIG_V10122.PREVIEW_CACHE_PREFIX+previewId);
+    clearDashboardCache();
+    return Object.assign({source:'MANUAL_FORM'},result);
+  }catch(error){
+    const msg=String(error&&error.message?error.message:error);
+    aiAudit_({previewId:previewId,command:preview.command,operation:'MANUAL_EXECUTE',warehouse:preview.slips.map(function(s){return s.warehouse;}).join(' | '),actor:preview.slips.map(function(s){return s.actor;}).join(', '),status:'MANUAL_BLOCKED_EXECUTION',result:msg,model:'MANUAL_FORM'});
+    throw new Error('CHƯA GHI KHO. '+msg);
+  }
+}
+
+function manualInventorySelfTestV10122_(){
+  const results=[];function t(name,ok,detail){results.push({name:name,pass:!!ok,detail:detail});}
+  let r=manualNormalizeInventoryPayloadV10122_({operation:'out',warehouse:'145',date:'2026-10-10',actor:'Thanh',counterparty:'TikTok',reason:'Giao khách',lines:[{code:'td-0001',qty:2},{code:'TD-0001',qty:3},{code:'TD-0002',qty:1}]});
+  t('normalize operation/warehouse',r.operation==='OUT'&&r.warehouse==='145',r);
+  t('merge duplicate codes',r.lines.length===2&&r.lines[0].code==='TD-0001'&&r.lines[0].qty===5,r.lines);
+  t('preserve actor/counterparty',r.actor==='Thanh'&&r.counterparty==='TikTok',r);
+  t('reason note',manualReasonNoteV10122_('Sử dụng nội bộ','Kỹ thuật')==='Lý do: Sử dụng nội bộ · Ghi chú: Kỹ thuật',manualReasonNoteV10122_('Sử dụng nội bộ','Kỹ thuật'));
+  return {version:MANUAL_INVENTORY_CONFIG_V10122.VERSION,total:results.length,passed:results.filter(function(x){return x.pass;}).length,failed:results.filter(function(x){return !x.pass;}).length,pass:results.every(function(x){return x.pass;}),results:results};
+}
 
 function executeAiInventoryPreview(payload) {
   payload = payload || {};
