@@ -58,8 +58,8 @@ jobs:
           pathlib.Path('/tmp/index_scripts.js').write_text('\n'.join(blocks), encoding='utf-8')
           subprocess.check_call(['node', '--check', '/tmp/index_scripts.js'])
           PY
-          grep -q "const APP_VERSION = 'V10.15.2';" code.js
-          grep -q 'let APP_VERSION="V10.15.2";' Index.html
+          grep -q "const APP_VERSION = 'V10.15.3';" code.js
+          grep -q 'let APP_VERSION="V10.15.3";' Index.html
 
       - name: Regression checks
         shell: bash
@@ -82,6 +82,7 @@ jobs:
           const voucherCenter4CSuite = voucherCenter4CSelfTestV10150_();
           const voucherPhase5Suite = voucherCorrectionPhase5SelfTestV10151_();
           const voucherDckSuite = voucherDckCorrectionSelfTestV10152_();
+          const voucherKkSuite = voucherCountCorrectionSelfTestV10153_();
           if (!oldSuite.pass) process.exit(31);
           if (!resolverSuite.pass) process.exit(32);
           if (!historicalSuite.pass) process.exit(33);
@@ -97,6 +98,7 @@ jobs:
           if (!voucherCenter4CSuite.pass) { console.error(JSON.stringify(voucherCenter4CSuite)); process.exit(43); }
           if (!voucherPhase5Suite.pass) { console.error(JSON.stringify(voucherPhase5Suite)); process.exit(44); }
           if (!voucherDckSuite.pass) { console.error(JSON.stringify(voucherDckSuite)); process.exit(45); }
+          if (!voucherKkSuite.pass) { console.error(JSON.stringify(voucherKkSuite)); process.exit(46); }
           console.log('Core regression:', oldSuite.passed + '/' + oldSuite.total, 'PASS');
           console.log('Resolver V2:', resolverSuite.passed + '/' + resolverSuite.total, 'PASS');
           console.log('Historical Voucher:', historicalSuite.passed + '/' + historicalSuite.total, 'PASS');
@@ -112,6 +114,7 @@ jobs:
           console.log('Voucher Center 4C:', voucherCenter4CSuite.passed + '/' + voucherCenter4CSuite.total, 'PASS');
           console.log('Voucher correction Stage 5:', voucherPhase5Suite.passed + '/' + voucherPhase5Suite.total, 'PASS');
           console.log('DCK correction Stage 5:', voucherDckSuite.passed + '/' + voucherDckSuite.total, 'PASS');
+          console.log('KK correction Stage 5:', voucherKkSuite.passed + '/' + voucherKkSuite.total, 'PASS');
           JS
           node /tmp/regression_test.js
 
