@@ -41,8 +41,8 @@ jobs:
           pathlib.Path('/tmp/index_scripts.js').write_text('\n'.join(blocks), encoding='utf-8')
           subprocess.check_call(['node','--check','/tmp/index_scripts.js'])
           PY
-          grep -q "const APP_VERSION = 'V10.11.1';" code.js
-          grep -q 'let APP_VERSION="V10.11.1";' Index.html
+          grep -q "const APP_VERSION = 'V10.12.0';" code.js
+          grep -q 'let APP_VERSION="V10.12.0";' Index.html
 
       - name: Regression checks
         shell: bash
@@ -78,5 +78,5 @@ jobs:
           git config user.name "ChatGPT AI Patch"
           git config user.email "ai-patch@users.noreply.github.com"
           git add -A
-          git commit -m "V10.11.1: Luna-first Smart Router [ai-applied]"
+          git commit -m "V10.12.0: Nhap Xuat UI Phase 1 [ai-applied]"
           git push origin HEAD:dev-v10.10.6
