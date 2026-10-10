@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.15.1';
+const APP_VERSION = 'V10.15.2';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -5597,13 +5597,14 @@ function inventoryVoucherLifecycleV10131_(voucher){
 
 function inventoryTransferLifecycleFromRowsV10132_(voucher,rows){
   voucher=String(voucher||'').trim().toUpperCase();rows=Array.isArray(rows)?rows:[];
-  const related=[],seen={};let hasVoid=false;
+  const related=[],seen={};let hasVoid=false,hasCorrect=false;
   rows.forEach(function(r){
     const id=String(r.transferId||'').trim().toUpperCase(),text=String(r.note||'').toUpperCase();
     if(!id||id===voucher)return;
     if(text.indexOf('[VOID '+voucher+']')>=0){hasVoid=true;if(!seen[id]){seen[id]=1;related.push(id);}}
+    if(text.indexOf('[CORRECT '+voucher+']')>=0){hasCorrect=true;if(!seen[id]){seen[id]=1;related.push(id);}}
   });
-  return {voucher:voucher,status:hasVoid?'VOIDED':'POSTED',relatedVouchers:related,hasAdjustment:hasVoid};
+  return {voucher:voucher,status:hasVoid?'VOIDED':hasCorrect?'CORRECTED':'POSTED',relatedVouchers:related,hasAdjustment:hasVoid||hasCorrect};
 }
 function inventoryTransferLifecycleV10132_(voucher){
   voucher=String(voucher||'').trim().toUpperCase();
@@ -5681,7 +5682,7 @@ function getInventoryVoucherDetail(payload){
   if(!voucher)throw new Error('Thiếu số phiếu cần xem.');
   if(/^DCK-/.test(voucher)){
     const doc=inventoryGetTransferVoucherV10132_(voucher);if(!doc)throw new Error('Không tìm thấy đúng số phiếu '+voucher+'.');
-    return Object.assign({},doc,{canPrint:true,canEdit:false,canVoid:doc.status==='POSTED',phase:'3C',correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,loadedAt:Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')});
+    return Object.assign({},doc,{canPrint:true,canEdit:doc.status==='POSTED',canVoid:doc.status==='POSTED',phase:'3C',correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,loadedAt:Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')});
   }
   const found=aiChatGetVoucherV1107_(voucher,'all');
   if(!found||!found.found){
@@ -5762,6 +5763,32 @@ function voucherCorrectionPhase5SelfTestV10151_(){
   test('missing SKU rejected',function(){return voucherCorrectionValidateLinesV10151_([{code:'TD-0001',qty:2}],base);},'ERR');
   return {version:'V10.15.1',total:checks.length,passed:checks.filter(function(x){return x.pass;}).length,failed:checks.filter(function(x){return !x.pass;}).length,pass:checks.every(function(x){return x.pass;}),results:checks};
 }
+function prepareSpecialVoucherCorrectV10152_(payload,actor){
+  const voucher=String(payload.voucher||'').trim().toUpperCase();
+  if(!/^DCK-/.test(voucher))return null;
+  const doc=inventoryGetTransferVoucherV10132_(voucher);
+  if(!doc)throw new Error('Không tìm thấy phiếu điều chuyển '+voucher+'.');
+  const life=inventoryTransferLifecycleV10132_(voucher);
+  if(life.status!=='POSTED')throw new Error('Phiếu '+voucher+' đã được sửa/hoàn tác.');
+  const reason=String(payload.reason||'').trim().slice(0,VOUCHER_ADJUST_CONFIG_V10131.MAX_REASON);
+  if(!reason)throw new Error('Vui lòng nhập lý do sửa phiếu điều chuyển.');
+  const original=doc.rows.map(function(r){return {code:r.code,qty:Math.max(toNumber_(r.input),toNumber_(r.output))};});
+  const map=voucherCorrectionValidateLinesV10151_(payload.lines,original);
+  const corrected=original.map(function(l){return {code:String(l.code).toUpperCase(),quantity:map[String(l.code).toUpperCase()]};}).filter(function(l){return l.quantity>0;});
+  if(!corrected.length)throw new Error('Muốn đưa toàn bộ số lượng về 0, hãy dùng Hoàn tác phiếu.');
+  const reverse={slipNo:'R1',operation:'TRANSFER',sourceWarehouse:doc.destinationWarehouse,destinationWarehouse:doc.sourceWarehouse,actor:actor,counterparty:'Kho '+doc.sourceWarehouse,businessReason:'Đảo điều chuyển để sửa '+voucher,note:'[CORRECT '+voucher+'] · REVERSAL_TRANSFER · Lý do: '+reason,lines:original.map(function(l){return {code:l.code,quantity:l.qty,itemText:l.code,sourceExcerpt:l.code};})};
+  const replacement={slipNo:'C1',operation:'TRANSFER',sourceWarehouse:doc.sourceWarehouse,destinationWarehouse:doc.destinationWarehouse,actor:actor,counterparty:'Kho '+doc.destinationWarehouse,businessReason:reason,note:'[CORRECT '+voucher+'] · REPLACEMENT_TRANSFER'+(payload.note?' · Ghi chú: '+String(payload.note).slice(0,VOUCHER_ADJUST_CONFIG_V10131.MAX_NOTE):''),lines:corrected.map(function(l){return {code:l.code,quantity:l.quantity,itemText:l.code,sourceExcerpt:l.code};})};
+  const preview=aiBuildBatchLivePreview_({transactionDate:dateKey_(new Date()),command:'CORRECT '+voucher,slips:[reverse,replacement]});
+  preview.originalVoucher=voucher;preview.correctionType='CORRECT';preview.historicalGuard={originalVoucher:voucher,action:'CORRECT'};preview.originalSummary=doc;preview.ruleSet=CORE_V105_CONFIG.RULESET_VERSION;preview.planVersion='VOUCHER_ADJUST_5_DCK';
+  return inventoryVoucherStorePreviewV10131_(preview);
+}
+function voucherDckCorrectionSelfTestV10152_(){
+  const voucher='DCK-20261010-001',rows=[{transferId:voucher,note:'original'},{transferId:'DCK-20261010-002',note:'[CORRECT '+voucher+'] · REVERSAL_TRANSFER'},{transferId:'DCK-20261010-003',note:'[CORRECT '+voucher+'] · REPLACEMENT_TRANSFER'}];
+  const corrected=inventoryTransferLifecycleFromRowsV10132_(voucher,rows);
+  const voided=inventoryTransferLifecycleFromRowsV10132_(voucher,[{transferId:'DCK-20261010-004',note:'[VOID '+voucher+']'}]);
+  const tests=[{name:'corrected transfer detected',pass:corrected.status==='CORRECTED'&&corrected.relatedVouchers.length===2},{name:'voided transfer detected',pass:voided.status==='VOIDED'},{name:'normal transfer',pass:inventoryTransferLifecycleFromRowsV10132_(voucher,[rows[0]]).status==='POSTED'}];
+  return {version:'V10.15.2',total:tests.length,passed:tests.filter(function(t){return t.pass;}).length,failed:tests.filter(function(t){return !t.pass;}).length,pass:tests.every(function(t){return t.pass;}),results:tests};
+}
 function prepareVoucherAdjustmentV10131(payload){
   payload=payload||{};
   const voucher=String(payload.voucher||'').trim().toUpperCase();
@@ -5774,7 +5801,8 @@ function prepareVoucherAdjustmentV10131(payload){
   if(action==='VOID'&&(/^DCK-/.test(voucher)||/^KK-/.test(voucher))){
     const special=prepareSpecialVoucherVoidV10132_(payload,actor);if(special)return special;
   }
-  if(action==='CORRECT'&&(/^DCK-/.test(voucher)||/^KK-/.test(voucher)))throw new Error('Phase 3C hiện chỉ hỗ trợ Hoàn tác an toàn cho DCK/KK; chưa sửa trực tiếp hai loại phiếu này.');
+  if(action==='CORRECT'&&/^DCK-/.test(voucher))return prepareSpecialVoucherCorrectV10152_(payload,actor);
+  if(action==='CORRECT'&&/^KK-/.test(voucher))throw new Error('Sửa phiếu KK cần tính delta riêng; hiện chỉ hỗ trợ Hoàn tác an toàn.');
   const found=aiChatGetVoucherV1107_(voucher,'all');
   if(!found||!found.found)throw new Error(found&&found.message||('Không tìm thấy '+voucher+'.'));
   const summary=inventoryVoucherSummaryV10130_(found);
