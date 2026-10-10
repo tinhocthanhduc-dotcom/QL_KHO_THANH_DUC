@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.17.0</title>
+<title>QL KHO THÀNH ĐỨC · V10.18.0</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -381,7 +381,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 @media(max-width:1200px){.voucher-center-controls{grid-template-columns:repeat(3,minmax(0,1fr))}.voucher-center-controls input{grid-column:1/-1}.vc-report-grid{grid-template-columns:1fr}}
 @media(max-width:800px){.voucher-center-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.vc-flow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.voucher-center-controls{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.voucher-center-kpis,.vc-flow-kpis,.voucher-center-controls{grid-template-columns:1fr}}
-/* V10.17.0 Stage 6 print preview */
+/* V10.18.0 Stage 6 print preview */
 .voucher-print-preview-modal{width:min(1000px,96vw);max-height:94vh;display:flex;flex-direction:column;overflow:hidden;padding:0}
 .voucher-print-preview-header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid #e4e7ec}
 .voucher-print-preview-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid #e4e7ec}
@@ -516,7 +516,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
           </div>
         </div>
         <div class="ai-execution-actions">
-          <button class="action secondary" id="aiExecutionCancel" style="display:none">Hủy lệnh</button>
+          <button class="action secondary" id="aiExecutionCancel" style="display:none">Hủy lệnh</button><button class="action secondary" id="aiTransferToForm" type="button" style="display:none">📝 Chuyển sang form Nhập/Xuất</button>
           <button class="action primary" id="aiExecute" disabled style="display:none">Xác nhận & ghi kho</button>
         </div>
         <div class="ai-execution-safety"><strong>Kiểm soát:</strong> AI không ghi trực tiếp. Backend đọc tồn live lần cuối, kiểm tra quyền, chống trùng và rollback nếu hậu kiểm lỗi.</div>
@@ -762,7 +762,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.17.0";
+let APP_VERSION="V10.18.0";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
@@ -1272,6 +1272,7 @@ function loadAiStatus(){$("aiStatusChip").className="module-chip loading";$("aiS
 function setAiExecutionStatus(state,text){const el=$("aiExecutionStatus");if(!el)return;el.className="execution-status "+String(state||"idle");el.textContent=text||"Chưa có lệnh"}
 function resetAiPreview(clearCommand=false){
   aiPreviewData=null;
+  if($("aiTransferToForm"))$("aiTransferToForm").style.display="none";
   $("aiExecute").disabled=true;$("aiExecute").style.display='none';
   const cancel=$("aiExecutionCancel");if(cancel)cancel.style.display='none';
   const preview=$("aiPreview");preview.style.display='block';preview.className='ai-preview execution-placeholder';
@@ -1281,7 +1282,7 @@ function resetAiPreview(clearCommand=false){
 }
 function cancelAiExecution(){if(!aiPreviewData)return toast('Không có lệnh đang chờ');resetAiPreview(false);toast('Đã hủy Action Plan, chưa ghi dữ liệu')}
 function renderAiExecutionSuccess(res){
-  aiPreviewData=null;const b=$("aiExecute");b.disabled=true;b.style.display='none';const cancel=$("aiExecutionCancel");if(cancel)cancel.style.display='none';
+  aiPreviewData=null;aiUpdateTransferButton();const b=$("aiExecute");b.disabled=true;b.style.display='none';const cancel=$("aiExecutionCancel");if(cancel)cancel.style.display='none';
   const vouchers=(res?.vouchers||[]).map(v=>v.voucher||v.transferId||'').filter(Boolean);const preview=$("aiPreview");preview.style.display='block';preview.className='ai-preview execution-success-state';
   preview.innerHTML=`<div class="execution-success"><div class="execution-success-icon">✓</div><h4>Đã thực hiện & hậu kiểm đạt</h4><p>${fmt(res?.slipCount||0)} phiếu · ${fmt(res?.lineCount||0)} dòng đã ghi sổ an toàn.</p>${vouchers.length?`<div class="execution-success-vouchers">${vouchers.map(esc).join(' · ')}</div>`:''}</div>`;
   setAiExecutionStatus('success','Đã thực hiện');
@@ -1301,6 +1302,7 @@ function renderAiPreview(data){
   $("aiPreview").style.display='block';
   const execCancel=$("aiExecutionCancel");if(execCancel)execCancel.style.display=data?'inline-flex':'none';
   setAiExecutionStatus(data&&data.ready?'pending':'blocked',data&&data.ready?'Chờ xác nhận':'Bị chặn');
+  aiUpdateTransferButton();
   if(!data||!data.ready){$("aiExecute").disabled=true;$("aiExecute").style.display='none';const un=data?.exceptions||data?.unresolved||[];let html=`<h3>${data?.aiConfirmedNoWrite?'🛡️ Chưa thể ghi kho':'Cần làm rõ trước khi ghi'}</h3>`;if(data?.clarification)html+=`<div class="note">${esc(data.clarification)}</div>`;un.forEach((u,i)=>{const type=String(u.type||'').toUpperCase(),label=type==='NEW_SKU'?'MÃ MỚI':type==='INSUFFICIENT_STOCK'?'THIẾU TỒN':type==='AMBIGUOUS_SKU'?'MÃ MƠ HỒ':type||'CẦN XỬ LÝ';html+=`<div class="ai-candidate"><div class="ai-exception-head"><strong>${u.slipNo?`Phiếu ${esc(u.slipNo)} · `:''}${esc(u.itemText||u.code||'')}</strong><span class="badge warn">${esc(label)}</span></div>${u.message?`<div style="margin-top:5px">${esc(u.message)}</div>`:''}`;const c=u.candidates||[];if(c.length)html+=`<div class="note" style="margin-top:6px">Có thể là: ${c.slice(0,4).map(x=>`${esc(x.code)} · ${esc(x.name)}`).join('<br>')}</div>`;if(data?.blockedId){html+='<div class="ai-exception-actions">';if(u.canCreateNew)html+=canPerm("CREATE_SKU")?`<button class="mini primary" data-ai-create-new="${i}">➕ Tạo mã mới</button>`:`<button class="mini" disabled title="Cần ADMIN">🔒 Tạo mã mới · ADMIN</button>`;if(type==='INSUFFICIENT_STOCK'&&Number(u.available||0)>0)html+=`<button class="mini warn" data-ai-use-available="${i}">Dùng tối đa ${fmt(u.available)}</button>`;if(u.slipNo)html+=`<button class="mini" data-ai-skip-slip="${i}">Bỏ phiếu ${esc(u.slipNo)}</button>`;html+='</div>'}html+='</div>'});$("aiPreview").className='ai-preview warn';$("aiPreview").innerHTML=html;return}
   const slips=Array.isArray(data.slips)?data.slips:[];let html=`<h3>📋 AI đã chuẩn bị ${fmt(data.slipCount||slips.length)} phiếu</h3><div class="ai-batch-summary"><strong>Ngày ${esc(data.transactionDateDisplay||data.transactionDate||'')}</strong> · ${fmt(data.lineCount||0)} dòng · Tổng SL ${fmt(data.totalQty||0)}<br>Backend sẽ đọc tồn live lần cuối khi anh xác nhận.</div>`;slips.forEach((s,idx)=>{const place=s.operation==='TRANSFER'?`Kho ${s.sourceWarehouse} → Kho ${s.destinationWarehouse}`:`Kho ${s.warehouse}`;html+=`<div class="ai-slip"><div class="ai-slip-head"><strong>Phiếu ${esc(s.slipNo||String(idx+1))} · ${esc(s.operationLabel)} · ${esc(place)}</strong><span class="pill">${fmt((s.lines||[]).length)} dòng</span></div>`;(s.lines||[]).forEach(r=>{const move=s.operation==='TRANSFER'?`Nguồn ${fmt(r.before)} → ${fmt(r.after)}<br>Đích ${fmt(r.destinationBefore)} → ${fmt(r.destinationAfter)}`:`${fmt(r.before)} → ${fmt(r.after)}`;html+=`<div class="ai-line"><strong>${esc(r.code)}</strong><div>${esc(r.name)}<div class="note">ĐVT: <strong>${esc(unitOf(r.code,r.name,r.unit))}</strong> · ${s.operation==='ADJUST'?'Đặt tồn mới':'SL: '+fmt(r.qty)}</div></div><div class="move">${move}</div></div>`});html+='</div>'});$("aiPreview").className='ai-preview ready';$("aiPreview").innerHTML=html;$("aiExecute").textContent=`Xác nhận ghi ${fmt(data.slipCount||slips.length)} phiếu`;$("aiExecute").disabled=false;$("aiExecute").style.display='inline-flex'
 }
@@ -1336,6 +1338,38 @@ function ioSyncReasonOptions(){var el=$("ioReason");if(!el)return;var keep=ioDra
 function ioSetMode(mode,mark){if(mark===undefined)mark=true;ioDraft.mode=mode==="OUT"?"OUT":"IN";if($("ioModeIn"))$("ioModeIn").classList.toggle("active",ioDraft.mode==="IN");if($("ioModeOut"))$("ioModeOut").classList.toggle("active",ioDraft.mode==="OUT");if($("ioModeHint"))$("ioModeHint").textContent=ioDraft.mode==="IN"?"Tăng tồn tại kho đã chọn":"Giảm tồn tại kho đã chọn · không cho phép âm kho";if($("ioPreviewType")){$("ioPreviewType").textContent=ioDraft.mode==="IN"?"NHẬP":"XUẤT";$("ioPreviewType").className="badge "+(ioDraft.mode==="IN"?"ok":"warn")}if($("ioCounterpartyLabel"))$("ioCounterpartyLabel").textContent=ioDraft.mode==="IN"?"Nhà cung cấp / nguồn nhập":"Khách hàng / đối tượng nhận";if($("ioCounterparty"))$("ioCounterparty").placeholder=ioDraft.mode==="IN"?"Ví dụ: Đức Lan, Nhất Phong...":"Ví dụ: TikTok, A Lên, khách lẻ...";ioSyncReasonOptions();ioRenderCart();if(mark)ioMarkChanged()}
 function ioSnapshotFromForm(){ioDraft.warehouse=$("ioWarehouse")&&$("ioWarehouse").value||"58";ioDraft.date=$("ioDate")&&$("ioDate").value||todayIso();ioDraft.counterparty=$("ioCounterparty")&&$("ioCounterparty").value.trim()||"";ioDraft.person=$("ioPerson")&&$("ioPerson").value.trim()||"";ioDraft.reason=$("ioReason")&&$("ioReason").value||"";ioDraft.note=$("ioNote")&&$("ioNote").value.trim()||""}
 function ioApplyDraftToForm(){if($("ioWarehouse"))$("ioWarehouse").value=ioDraft.warehouse||"58";if($("ioDate"))$("ioDate").value=ioDraft.date||todayIso();if($("ioCounterparty"))$("ioCounterparty").value=ioDraft.counterparty||"";if($("ioPerson"))$("ioPerson").value=ioDraft.person||currentActor()||"";if($("ioNote"))$("ioNote").value=ioDraft.note||"";ioSetMode(ioDraft.mode,false);if($("ioReason"))$("ioReason").value=ioDraft.reason||$("ioReason").value}
+function aiPreviewCanTransferToForm(preview){
+  if(!preview||!preview.ready||!Array.isArray(preview.slips)||preview.slips.length!==1)return false;
+  const slip=preview.slips[0];
+  return ["IN","OUT"].includes(slip.operation)&&["58","145"].includes(String(slip.warehouse||""))&&Array.isArray(slip.lines)&&slip.lines.length>0;
+}
+function aiUpdateTransferButton(){
+  const b=$("aiTransferToForm");if(!b)return;
+  const allowed=aiPreviewCanTransferToForm(aiPreviewData)&&canPerm(aiPreviewData.slips[0].operation==="IN"?"INVENTORY_IN":"INVENTORY_OUT");
+  b.style.display=allowed?"inline-flex":"none";b.disabled=!allowed;
+}
+function aiTransferPreviewToForm(){
+  const preview=aiPreviewData;
+  if(!aiPreviewCanTransferToForm(preview))return toast("Chỉ chuyển được preview một phiếu nhập hoặc xuất.");
+  const slip=preview.slips[0],mode=slip.operation;
+  if(!canPerm(mode==="IN"?"INVENTORY_IN":"INVENTORY_OUT"))return toast("Không có quyền lập phiếu loại này.");
+  const lines=[],missing=[];
+  slip.lines.forEach(function(l){
+    const x=ioFindMaster(l.code),qty=Number(l.qty);
+    if(!x||!Number.isSafeInteger(qty)||qty<=0){missing.push(l.code||"?");return;}
+    const prior=lines.find(z=>norm(z.code)===norm(x.code));
+    if(prior)prior.qty+=qty;
+    else lines.push({code:x.code,name:x.name,unit:unitOf(x.code,x.name,x.unit),qty:qty,price:Number(x.referencePrice||0)});
+  });
+  if(missing.length||!lines.length)return toast("Mã/SL chưa hợp lệ: "+missing.slice(0,3).join(", ")+". Chưa chuyển.");
+  if(ioDraft.lines.length&&!window.confirm("Thay nháp Nhập/Xuất hiện tại bằng phiếu AI đã chuẩn bị?"))return;
+  const wh=String(slip.warehouse);
+  ioDraft.mode=mode;ioDraft.warehouse=wh;ioDraft.date=todayIso();ioDraft.counterparty=slip.counterparty||"";ioDraft.person=currentActor()||slip.actor||"";ioDraft.reason=slip.businessReason||"";ioDraft.note=slip.note||"Nháp do AI hỗ trợ";ioDraft.lines=lines;
+  ioApplyDraftToForm();ioRenderCart();ioInvalidateServerPreview("Cần kiểm tra lại");
+  $("ioPreviewBody").innerHTML="Phiếu AI đã chuyển sang nháp. Nhân viên cần xem trước lại với tồn kho live trước khi ghi.";
+  resetAiPreview(false);showTab("inout");$("ioSearch").focus();
+  toast("Đã chuyển nháp AI sang form. CHƯA GHI KHO.");
+}
 function ioCopyVoucherToDraft(){
   const d=voucherDetail;
   if(!d||!["IN","OUT"].includes(d.operation)||!d.rows||!d.rows.length)return toast("Chỉ sao chép phiếu nhập/xuất PNK, PXK.");
@@ -1614,6 +1648,7 @@ function initMobileTableCards(){
 }
 
 document.addEventListener("DOMContentLoaded",function(){
+  $("aiTransferToForm").addEventListener("click",aiTransferPreviewToForm);
   $("voucherPrintPreviewClose").onclick=closeVoucherPrintPreview;
   $("voucherPaperSize").onchange=function(){setVoucherPrintPaper(this.value)};
   $("voucherPrintPreviewExecute").onclick=function(){setVoucherPrintPaper($("voucherPaperSize").value);window.print()};
