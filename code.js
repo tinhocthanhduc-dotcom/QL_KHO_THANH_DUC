@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.14.2';
+const APP_VERSION = 'V10.15.0';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -5837,6 +5837,82 @@ function voucherPhase3CSelfTestV10132_(){
 
 
 const VOUCHER_CENTER_CONFIG_V10140=Object.freeze({VERSION:'VOUCHER_CENTER_4A_2026-10-10',JOURNAL_LIMIT:5000,TRANSFER_LIMIT:1000});
+const VOUCHER_CENTER_4C_CONFIG_V10150=Object.freeze({
+  VERSION:'VOUCHER_CENTER_4C_2026-10-10',
+  LARGE_MIN_QTY:20,
+  LARGE_FACTOR:4,
+  MIN_BASELINE_SAMPLES:5
+});
+function voucherCenterMedianV10150_(values){
+  values=(Array.isArray(values)?values:[]).map(function(v){return toNumber_(v);}).filter(function(v){return v>=0;}).sort(function(a,b){return a-b;});
+  if(!values.length)return 0;
+  const m=Math.floor(values.length/2);
+  return values.length%2?values[m]:(values[m-1]+values[m])/2;
+}
+function voucherCenterAddAnomalyV10150_(doc,code,severity,label,detail){
+  if(!doc.anomalies)doc.anomalies=[];
+  if(doc.anomalies.some(function(a){return a.code===code&&String(a.detail||'')===String(detail||'');}))return;
+  doc.anomalies.push({code:code,severity:severity||'MEDIUM',label:label||code,detail:String(detail||'')});
+}
+function voucherCenterLineSignatureV10150_(doc){
+  return (doc.lineItems||[]).map(function(x){
+    return [normalize_(x.code||x.name||''),toNumber_(x.qty)].join(':');
+  }).sort().join('|');
+}
+function voucherCenterAnalyzeAnomaliesV10150_(docs){
+  docs=Array.isArray(docs)?docs:[];
+  docs.forEach(function(d){d.anomalies=[];d.anomalyCount=0;d.anomalyLevel='NONE';});
+  docs.forEach(function(d){
+    if(!String(d.actor||'').trim())voucherCenterAddAnomalyV10150_(d,'MISSING_ACTOR','MEDIUM','Thiếu người thực hiện','Phiếu chưa xác định được người thực hiện.');
+    if((d.type==='PNK'||d.type==='PXK')&&!String(d.counterparty||'').trim())voucherCenterAddAnomalyV10150_(d,'MISSING_COUNTERPARTY','MEDIUM','Thiếu đối tượng','Phiếu nhập/xuất chưa xác định được đối tượng phát sinh.');
+    if(!String(d.reason||'').trim())voucherCenterAddAnomalyV10150_(d,'MISSING_REASON','MEDIUM','Thiếu lý do','Phiếu chưa có lý do nghiệp vụ.');
+    if((d.relatedVouchers||[]).length>2)voucherCenterAddAnomalyV10150_(d,'ADJUSTMENT_CHAIN','MEDIUM','Chuỗi sửa/hoàn tác dài','Có '+(d.relatedVouchers||[]).length+' chứng từ liên quan tới phiếu gốc.');
+  });
+  const byType={};
+  docs.forEach(function(d){if(!byType[d.type])byType[d.type]=[];byType[d.type].push(toNumber_(d.totalQty));});
+  docs.forEach(function(d){
+    const sample=(byType[d.type]||[]).filter(function(v){return v>0;});
+    if(sample.length<VOUCHER_CENTER_4C_CONFIG_V10150.MIN_BASELINE_SAMPLES)return;
+    const med=voucherCenterMedianV10150_(sample);
+    const threshold=Math.max(VOUCHER_CENTER_4C_CONFIG_V10150.LARGE_MIN_QTY,med*VOUCHER_CENTER_4C_CONFIG_V10150.LARGE_FACTOR);
+    if(toNumber_(d.totalQty)>=threshold&&toNumber_(d.totalQty)>med){
+      voucherCenterAddAnomalyV10150_(d,'LARGE_QTY','HIGH','Số lượng lớn bất thường','Tổng SL '+toNumber_(d.totalQty)+'; trung vị lịch sử '+med+'; ngưỡng cảnh báo '+Math.round(threshold)+'.');
+    }
+  });
+  const dup={};
+  docs.forEach(function(d){
+    const sig=voucherCenterLineSignatureV10150_(d);if(!sig)return;
+    const key=[d.dateKey,d.type,normalize_(d.warehouseLabel),normalize_(d.actor),normalize_(d.counterparty),normalize_(d.reason),sig].join('||');
+    if(!dup[key])dup[key]=[];dup[key].push(d);
+  });
+  Object.keys(dup).forEach(function(k){
+    const arr=dup[k]||[];if(arr.length<2)return;
+    const vouchers=arr.map(function(x){return x.voucher;}).join(', ');
+    arr.forEach(function(d){voucherCenterAddAnomalyV10150_(d,'NEAR_DUPLICATE','HIGH','Phiếu gần giống/trùng','Cùng ngày và cùng nội dung chính với: '+vouchers+'.');});
+  });
+  const turnover={};
+  docs.forEach(function(d){
+    if(d.type!=='PNK'&&d.type!=='PXK')return;
+    (d.warehouses||[]).forEach(function(w){
+      (d.lineItems||[]).forEach(function(x){
+        const itemCode=String(x.code||'').trim().toUpperCase();if(!itemCode)return;
+        const key=[d.dateKey,String(w),itemCode].join('|');
+        if(!turnover[key])turnover[key]={inDocs:[],outDocs:[],code:itemCode,dateKey:d.dateKey,warehouse:String(w)};
+        (d.type==='PNK'?turnover[key].inDocs:turnover[key].outDocs).push(d);
+      });
+    });
+  });
+  Object.keys(turnover).forEach(function(k){
+    const x=turnover[k];if(!x.inDocs.length||!x.outDocs.length)return;
+    const detail='Mã '+x.code+' vừa có nhập và xuất tại Kho '+x.warehouse+' trong cùng ngày '+displayDate_(x.dateKey)+'. Nhật ký PXK/PNK hiện không có giờ chuẩn nên không kết luận theo phút.';
+    x.inDocs.concat(x.outDocs).forEach(function(d){voucherCenterAddAnomalyV10150_(d,'SAME_DAY_IN_OUT','MEDIUM','Nhập rồi xuất cùng ngày',detail);});
+  });
+  docs.forEach(function(d){
+    d.anomalyCount=(d.anomalies||[]).length;
+    d.anomalyLevel=(d.anomalies||[]).some(function(a){return a.severity==='HIGH';})?'HIGH':d.anomalyCount?'MEDIUM':'NONE';
+  });
+  return docs;
+}
 function voucherCenterRefTagsV10140_(text){
   text=String(text||'').toUpperCase();
   const out=[];const re=/\[(VOID|CORRECT)\s+((?:PXK|PNK|KK|DCK)-\d{8}-\d{3})\]/g;let m;
@@ -5876,6 +5952,7 @@ function voucherCenterBuildFromRowsV10140_(journalRows,transferRows){
       operation:s.operation,operationLabel:s.operationLabel,date:s.date||first.date||'',dateKey:String(first.dateKey||''),
       warehouseLabel:s.warehouseLabel||'',warehouses:s.warehouses||[],counterparty:s.counterparty||'',actor:s.actor||'',reason:s.reason||'',
       totalLines:s.totalLines||g.rows.length,totalQty:s.totalQty||0,status:status[voucher]||'POSTED',
+      lineItems:g.rows.map(function(r){return {code:String(r.code||''),name:String(r.name||''),qty:Math.max(toNumber_(r.input),toNumber_(r.output)),direction:toNumber_(r.input)>0?'IN':toNumber_(r.output)>0?'OUT':'ADJUST'};}),
       relatedVouchers:(relations[voucher]||[]).map(function(x){return x.voucher;}),parentVoucher:parent[voucher]?parent[voucher].voucher:'',parentAction:parent[voucher]?parent[voucher].action:'',
       searchText:normalize_([voucher,s.operationLabel,s.warehouseLabel,s.counterparty,s.actor,s.reason,g.rows.map(function(r){return [r.code,r.name].join(' ');}).join(' ')].join(' '))
     });
@@ -5892,10 +5969,12 @@ function voucherCenterBuildFromRowsV10140_(journalRows,transferRows){
       warehouseLabel:'Kho '+String(f.sourceWarehouse||'')+' → Kho '+String(f.destinationWarehouse||''),
       warehouses:[String(f.sourceWarehouse||''),String(f.destinationWarehouse||'')],counterparty:'Kho '+String(f.destinationWarehouse||''),actor:String(f.person||''),reason:'Điều chuyển kho',
       totalLines:rows.length,totalQty:rows.reduce(function(sum,r){return sum+toNumber_(r.qty);},0),status:status[voucher]||'POSTED',
+      lineItems:rows.map(function(r){return {code:String(r.code||''),name:String(r.name||''),qty:toNumber_(r.qty),direction:'TRANSFER'};}),
       relatedVouchers:(relations[voucher]||[]).map(function(x){return x.voucher;}),parentVoucher:parent[voucher]?parent[voucher].voucher:'',parentAction:parent[voucher]?parent[voucher].action:'',
       searchText:normalize_([voucher,'DCK',f.sourceWarehouse,f.destinationWarehouse,f.person,rows.map(function(r){return [r.code,r.name].join(' ');}).join(' ')].join(' '))
     });
   });
+  voucherCenterAnalyzeAnomaliesV10150_(docs);
   docs.sort(function(a,b){
     if(a.dateKey!==b.dateKey)return a.dateKey<b.dateKey?1:-1;
     return String(b.voucher).localeCompare(String(a.voucher));
@@ -5921,10 +6000,15 @@ function getVoucherCenter(payload){
     if(query&&String(r.searchText||'').indexOf(query)<0)return false;
     return true;
   });
-  const counts={total:rows.length,posted:0,corrected:0,voided:0,pxk:0,pnk:0,kk:0,dck:0};
-  rows.forEach(function(r){if(r.status==='VOIDED')counts.voided++;else if(r.status==='CORRECTED')counts.corrected++;else counts.posted++;const k=String(r.type||'').toLowerCase();if(Object.prototype.hasOwnProperty.call(counts,k))counts[k]++;});
+  const counts={total:rows.length,posted:0,corrected:0,voided:0,pxk:0,pnk:0,kk:0,dck:0,anomalous:0,highRisk:0};
+  rows.forEach(function(r){
+    if(r.status==='VOIDED')counts.voided++;else if(r.status==='CORRECTED')counts.corrected++;else counts.posted++;
+    const k=String(r.type||'').toLowerCase();if(Object.prototype.hasOwnProperty.call(counts,k))counts[k]++;
+    if(toNumber_(r.anomalyCount)>0)counts.anomalous++;
+    if(r.anomalyLevel==='HIGH')counts.highRisk++;
+  });
   const limit=Math.max(1,Math.min(1000,Math.floor(toNumber_(payload.limit)||500)));rows=rows.slice(0,limit);
-  return {version:VOUCHER_CENTER_CONFIG_V10140.VERSION,rows:rows,counts:counts,totalMatches:counts.total,returnedCount:rows.length,truncated:counts.total>limit,loadedAt:Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')};
+  return {version:VOUCHER_CENTER_4C_CONFIG_V10150.VERSION,rows:rows,counts:counts,totalMatches:counts.total,returnedCount:rows.length,truncated:counts.total>limit,loadedAt:Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')};
 }
 
 function inventoryVoucherDetailFromDatasetsV10141_(voucher,journalRows,transferRows){
@@ -5998,6 +6082,34 @@ function voucherCenter4BSelfTestV10141_(){
     {name:'print flags',pass:p.canPrint===true&&d.canPrint===true}
   ];
   return {version:'VOUCHER_CENTER_4B_2026-10-10',total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
+}
+
+function voucherCenter4CSelfTestV10150_(){
+  const journal=[
+    {date:'01/10/2026',dateKey:'20261001',voucher:'PXK-20261001-001',warehouse:'58',person:'Khách A',reason:'Xuất bán',note:'Thanh xuất; ghi thẳng sổ chính',code:'TD-A',name:'A',input:0,output:1},
+    {date:'02/10/2026',dateKey:'20261002',voucher:'PXK-20261002-002',warehouse:'58',person:'Khách B',reason:'Xuất bán',note:'Thanh xuất; ghi thẳng sổ chính',code:'TD-B',name:'B',input:0,output:1},
+    {date:'03/10/2026',dateKey:'20261003',voucher:'PXK-20261003-003',warehouse:'58',person:'Khách C',reason:'Xuất bán',note:'Thanh xuất; ghi thẳng sổ chính',code:'TD-C',name:'C',input:0,output:1},
+    {date:'04/10/2026',dateKey:'20261004',voucher:'PXK-20261004-004',warehouse:'58',person:'Khách D',reason:'Xuất bán',note:'Thanh xuất; ghi thẳng sổ chính',code:'TD-D',name:'D',input:0,output:1},
+    {date:'05/10/2026',dateKey:'20261005',voucher:'PXK-20261005-005',warehouse:'58',person:'Khách E',reason:'Xuất bán',note:'Thanh xuất; ghi thẳng sổ chính',code:'TD-E',name:'E',input:0,output:1},
+    {date:'06/10/2026',dateKey:'20261006',voucher:'PXK-20261006-006',warehouse:'58',person:'Khách F',reason:'Xuất bán',note:'Thanh xuất; ghi thẳng sổ chính',code:'TD-Z',name:'Z',input:0,output:30},
+    {date:'07/10/2026',dateKey:'20261007',voucher:'PNK-20261007-007',warehouse:'58',person:'Đức Lan',reason:'Nhập hàng',note:'Thanh nhận; ghi thẳng sổ chính',code:'TD-X',name:'X',input:5,output:0},
+    {date:'07/10/2026',dateKey:'20261007',voucher:'PXK-20261007-008',warehouse:'58',person:'Khách X',reason:'Xuất bán',note:'Thanh xuất; ghi thẳng sổ chính',code:'TD-X',name:'X',input:0,output:2},
+    {date:'08/10/2026',dateKey:'20261008',voucher:'PXK-20261008-009',warehouse:'58',person:'Khách Y',reason:'Xuất bán',note:'Tuấn xuất; ghi thẳng sổ chính',code:'TD-Y',name:'Y',input:0,output:2},
+    {date:'08/10/2026',dateKey:'20261008',voucher:'PXK-20261008-010',warehouse:'58',person:'Khách Y',reason:'Xuất bán',note:'Tuấn xuất; ghi thẳng sổ chính',code:'TD-Y',name:'Y',input:0,output:2},
+    {date:'09/10/2026',dateKey:'20261009',voucher:'PNK-20261009-011',warehouse:'58',person:'NCC',reason:'Nhập hàng',note:'',code:'TD-M',name:'M',input:2,output:0}
+  ];
+  const docs=voucherCenterBuildFromRowsV10140_(journal,[]);
+  function has(v,anomalyCode){const d=docs.find(function(x){return x.voucher===v;});return !!(d&&(d.anomalies||[]).some(function(a){return a.code===anomalyCode;}));}
+  const large=docs.find(function(x){return x.voucher==='PXK-20261006-006';});
+  const t=[
+    {name:'lineItems exposed for reporting',pass:large&&large.lineItems&&large.lineItems[0].code==='TD-Z'&&large.lineItems[0].qty===30},
+    {name:'large quantity anomaly',pass:has('PXK-20261006-006','LARGE_QTY')},
+    {name:'near duplicate anomaly',pass:has('PXK-20261008-009','NEAR_DUPLICATE')&&has('PXK-20261008-010','NEAR_DUPLICATE')},
+    {name:'same-day in/out anomaly',pass:has('PNK-20261007-007','SAME_DAY_IN_OUT')&&has('PXK-20261007-008','SAME_DAY_IN_OUT')},
+    {name:'missing actor anomaly',pass:has('PNK-20261009-011','MISSING_ACTOR')},
+    {name:'anomaly level computed',pass:large&&large.anomalyLevel==='HIGH'&&large.anomalyCount>0}
+  ];
+  return {version:VOUCHER_CENTER_4C_CONFIG_V10150.VERSION,total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
 }
 
 function voucherCenterSelfTestV10140_(){
