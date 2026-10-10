@@ -1106,7 +1106,7 @@ function buildVoucherPrintHtml(data){
 }
 function printVoucherDetail(){if(!voucherDetail)return toast("Chưa có phiếu để in");$("voucherPrintArea").innerHTML=buildVoucherPrintHtml(voucherDetail);window.print()}
 function voucherEditableLines(){
-  var by={},order=[],isCount=voucherDetail&&voucherDetail.operation==="ADJUST";(voucherDetail&&voucherDetail.rows||[]).forEach(function(r){var code=String(r.code||"").trim().toUpperCase(),qty=isCount?Number(r.after):Math.max(Number(r.input||0),Number(r.output||0));if(!code||!Number.isSafeInteger(qty)||qty<0||(!isCount&&qty===0))return;if(!by[code]){by[code]={code:code,name:r.name||"",qty:0};order.push(code)}if(isCount&&by[code].qty!==0)throw new Error("Phiếu KK có mã trùng");by[code].qty+=qty});return order.map(function(code){return by[code]})
+  var by={},order=[],isCount=voucherDetail&&voucherDetail.operation==="ADJUST";(voucherDetail&&voucherDetail.rows||[]).forEach(function(r){var code=String(r.code||"").trim().toUpperCase(),qty=isCount?Number(r.after):Math.max(Number(r.input||0),Number(r.output||0));if(!code||!Number.isSafeInteger(qty)||qty<0||(!isCount&&qty===0))return;if(!by[code]){by[code]={code:code,name:r.name||"",qty:0};order.push(code)}if(isCount&&by[code].seen)throw new Error("Phiếu KK có mã trùng");by[code].seen=true;by[code].qty+=qty});return order.map(function(code){return by[code]})
 }
 function voucherActionInvalidate(){
   voucherAction.preview=null;$("voucherActionCommit").disabled=true;$("voucherActionPreview").classList.remove("open");$("voucherActionPreview").innerHTML=""
@@ -1122,13 +1122,13 @@ function openVoucherAction(mode){
   var isVoid=mode==="VOID";
   $("voucherActionHead").className="voucher-action-head"+(isVoid?" out":"");
   $("voucherActionTitle").textContent=isVoid?"Hoàn tác phiếu":"Sửa phiếu";
-  $("voucherActionSubtitle").textContent=isVoid?"Tạo bút toán đảo toàn bộ phiếu gốc; không xóa chứng từ cũ.":"Đảo phiếu gốc rồi tạo phiếu thay thế mới trong cùng một transaction.";
+  $("voucherActionSubtitle").textContent=isVoid?"Tạo bút toán đảo phiếu gốc; không xóa chứng từ cũ.":(voucherDetail.operation==="ADJUST"?"Sửa số đã kiểm kê; chỉ ghi phần chênh lệch tăng/giảm vào tồn hiện tại, không ghi đè lịch sử.":voucherDetail.operation==="TRANSFER"?"Đảo điều chuyển cũ và tạo điều chuyển thay thế trong một lần xác nhận.":"Đảo phiếu gốc rồi tạo phiếu thay thế mới trong cùng một transaction.");
   $("voucherActionOriginal").value=voucherDetail.voucher||"";
   $("voucherActionActor").value=currentActor()||voucherDetail.actor||"";
   $("voucherActionCounterparty").value=voucherDetail.counterparty||"";
   $("voucherActionReason").value=isVoid?"":(voucherDetail.reason||"");
   $("voucherActionNote").value=isVoid?"":(voucherDetail.note||"");
-  $("voucherActionReasonLabel").textContent=isVoid?"Lý do hoàn tác":"Lý do phiếu mới";
+  $("voucherActionReasonLabel").textContent=isVoid?"Lý do hoàn tác":"Lý do điều chỉnh";
   $("voucherActionCounterpartyWrap").style.display=isVoid?"none":"flex";
   $("voucherActionNoteWrap").style.display=isVoid?"none":"flex";
   var lines=voucherEditableLines();
