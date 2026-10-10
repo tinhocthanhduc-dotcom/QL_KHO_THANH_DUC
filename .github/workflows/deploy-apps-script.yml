@@ -58,8 +58,8 @@ jobs:
           pathlib.Path('/tmp/index_scripts.js').write_text('\n'.join(blocks), encoding='utf-8')
           subprocess.check_call(['node', '--check', '/tmp/index_scripts.js'])
           PY
-          grep -q "const APP_VERSION = 'V10.18.0';" code.js
-          grep -q 'let APP_VERSION="V10.18.0";' Index.html
+          grep -q "const APP_VERSION = 'V10.18.1';" code.js
+          grep -q 'let APP_VERSION="V10.18.1";' Index.html
 
       - name: Regression checks
         shell: bash
