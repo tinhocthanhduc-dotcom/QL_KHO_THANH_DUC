@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.13.2';
+const APP_VERSION = 'V10.14.0';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -5833,6 +5833,116 @@ function voucherPhase3CSelfTestV10132_(){
     {name:'KK increase reverses OUT',pass:groups.OUT.length===1&&groups.OUT[0].code==='TD-2'&&groups.OUT[0].quantity===5}
   ];
   return {version:'VOUCHER_PHASE3C_2026-10-10',total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
+}
+
+
+const VOUCHER_CENTER_CONFIG_V10140=Object.freeze({VERSION:'VOUCHER_CENTER_4A_2026-10-10',JOURNAL_LIMIT:5000,TRANSFER_LIMIT:1000});
+function voucherCenterRefTagsV10140_(text){
+  text=String(text||'').toUpperCase();
+  const out=[];const re=/\[(VOID|CORRECT)\s+((?:PXK|PNK|KK|DCK)-\d{8}-\d{3})\]/g;let m;
+  while((m=re.exec(text)))out.push({action:m[1],voucher:m[2]});
+  return out;
+}
+function voucherCenterIsTransferSubVoucherV10140_(row){
+  const voucher=String(row&&row.voucher||'').toUpperCase();
+  if(!/^(PXK|PNK)-/.test(voucher))return false;
+  const text=String((row&&row.reason||'')+' '+(row&&row.note||'')).toUpperCase();
+  return /DCK-\d{8}-\d{3}/.test(text)||/CHUYỂN QUA KHO|NHẬP CHUYỂN KHO/.test(text);
+}
+function voucherCenterBuildFromRowsV10140_(journalRows,transferRows){
+  journalRows=Array.isArray(journalRows)?journalRows:[];transferRows=Array.isArray(transferRows)?transferRows:[];
+  const status={},relations={},parent={},groups={};
+  function rel_(target,child,action){
+    target=String(target||'').toUpperCase();child=String(child||'').toUpperCase();if(!target||!child||target===child)return;
+    if(!relations[target])relations[target]=[];if(!relations[target].some(function(x){return x.voucher===child;}))relations[target].push({voucher:child,action:action});
+    if(!parent[child])parent[child]={voucher:target,action:action};
+    if(action==='VOID')status[target]='VOIDED';else if(status[target]!=='VOIDED')status[target]='CORRECTED';
+  }
+  journalRows.forEach(function(r){
+    const rv=String(r.voucher||'').trim().toUpperCase(),text=String((r.reason||'')+' '+(r.note||''));
+    voucherCenterRefTagsV10140_(text).forEach(function(t){rel_(t.voucher,rv,t.action);});
+    if(!/^(PXK|PNK|KK)-\d{8}-\d{3}$/.test(rv)||voucherCenterIsTransferSubVoucherV10140_(r))return;
+    if(!groups[rv])groups[rv]={voucher:rv,rows:[]};groups[rv].rows.push(r);
+  });
+  transferRows.forEach(function(r){
+    const id=String(r.transferId||'').trim().toUpperCase(),text=String(r.note||'');
+    voucherCenterRefTagsV10140_(text).forEach(function(t){rel_(t.voucher,id,t.action);});
+  });
+  const docs=[];
+  Object.keys(groups).forEach(function(voucher){
+    const g=groups[voucher],s=inventoryVoucherSummaryV10130_({voucher:voucher,rows:g.rows}),first=g.rows[0]||{};
+    docs.push({
+      voucher:voucher,type:s.operation==='IN'?'PNK':s.operation==='OUT'?'PXK':s.operation==='ADJUST'?'KK':'',
+      operation:s.operation,operationLabel:s.operationLabel,date:s.date||first.date||'',dateKey:String(first.dateKey||''),
+      warehouseLabel:s.warehouseLabel||'',warehouses:s.warehouses||[],counterparty:s.counterparty||'',actor:s.actor||'',reason:s.reason||'',
+      totalLines:s.totalLines||g.rows.length,totalQty:s.totalQty||0,status:status[voucher]||'POSTED',
+      relatedVouchers:(relations[voucher]||[]).map(function(x){return x.voucher;}),parentVoucher:parent[voucher]?parent[voucher].voucher:'',parentAction:parent[voucher]?parent[voucher].action:'',
+      searchText:normalize_([voucher,s.operationLabel,s.warehouseLabel,s.counterparty,s.actor,s.reason,g.rows.map(function(r){return [r.code,r.name].join(' ');}).join(' ')].join(' '))
+    });
+  });
+  const transferGroups={};
+  transferRows.forEach(function(r){
+    const id=String(r.transferId||'').trim().toUpperCase();if(!/^DCK-\d{8}-\d{3}$/.test(id)||String(r.status||'').toUpperCase()!=='COMPLETED')return;
+    if(!transferGroups[id])transferGroups[id]=[];transferGroups[id].push(r);
+  });
+  Object.keys(transferGroups).forEach(function(voucher){
+    const rows=transferGroups[voucher],f=rows[0]||{};
+    docs.push({
+      voucher:voucher,type:'DCK',operation:'TRANSFER',operationLabel:'PHIẾU ĐIỀU CHUYỂN',date:f.date||'',dateKey:String(f.dateKey||''),
+      warehouseLabel:'Kho '+String(f.sourceWarehouse||'')+' → Kho '+String(f.destinationWarehouse||''),
+      warehouses:[String(f.sourceWarehouse||''),String(f.destinationWarehouse||'')],counterparty:'Kho '+String(f.destinationWarehouse||''),actor:String(f.person||''),reason:'Điều chuyển kho',
+      totalLines:rows.length,totalQty:rows.reduce(function(sum,r){return sum+toNumber_(r.qty);},0),status:status[voucher]||'POSTED',
+      relatedVouchers:(relations[voucher]||[]).map(function(x){return x.voucher;}),parentVoucher:parent[voucher]?parent[voucher].voucher:'',parentAction:parent[voucher]?parent[voucher].action:'',
+      searchText:normalize_([voucher,'DCK',f.sourceWarehouse,f.destinationWarehouse,f.person,rows.map(function(r){return [r.code,r.name].join(' ');}).join(' ')].join(' '))
+    });
+  });
+  docs.sort(function(a,b){
+    if(a.dateKey!==b.dateKey)return a.dateKey<b.dateKey?1:-1;
+    return String(b.voucher).localeCompare(String(a.voucher));
+  });
+  return docs;
+}
+function getVoucherCenter(payload){
+  payload=payload||{};
+  const query=normalize_(payload.query||''),type=String(payload.type||'').trim().toUpperCase(),warehouse=String(payload.warehouse||'all').trim(),status=String(payload.status||'').trim().toUpperCase();
+  const fromDate=payload.fromDate?dateKey_(payload.fromDate):'',toDate=payload.toDate?dateKey_(payload.toDate):'';
+  if(payload.fromDate&&!fromDate)throw new Error('Từ ngày không hợp lệ.');
+  if(payload.toDate&&!toDate)throw new Error('Đến ngày không hợp lệ.');
+  if(fromDate&&toDate&&fromDate>toDate)throw new Error('Từ ngày phải nhỏ hơn hoặc bằng Đến ngày.');
+  const journal=getJournalHistory({warehouse:'all',allDates:true,limit:VOUCHER_CENTER_CONFIG_V10140.JOURNAL_LIMIT});
+  const transfer=getTransferHistory({limit:VOUCHER_CENTER_CONFIG_V10140.TRANSFER_LIMIT});
+  const all=voucherCenterBuildFromRowsV10140_(journal.rows||[],transfer.rows||[]);
+  let rows=all.filter(function(r){
+    if(fromDate&&r.dateKey&&r.dateKey<fromDate)return false;
+    if(toDate&&r.dateKey&&r.dateKey>toDate)return false;
+    if(type&&r.type!==type)return false;
+    if(status&&r.status!==status)return false;
+    if(warehouse!=='all'&&r.warehouses.indexOf(warehouse)<0)return false;
+    if(query&&String(r.searchText||'').indexOf(query)<0)return false;
+    return true;
+  });
+  const counts={total:rows.length,posted:0,corrected:0,voided:0,pxk:0,pnk:0,kk:0,dck:0};
+  rows.forEach(function(r){if(r.status==='VOIDED')counts.voided++;else if(r.status==='CORRECTED')counts.corrected++;else counts.posted++;const k=String(r.type||'').toLowerCase();if(Object.prototype.hasOwnProperty.call(counts,k))counts[k]++;});
+  const limit=Math.max(1,Math.min(1000,Math.floor(toNumber_(payload.limit)||500)));rows=rows.slice(0,limit);
+  return {version:VOUCHER_CENTER_CONFIG_V10140.VERSION,rows:rows,counts:counts,totalMatches:counts.total,returnedCount:rows.length,truncated:counts.total>limit,loadedAt:Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')};
+}
+function voucherCenterSelfTestV10140_(){
+  const journal=[
+    {date:'10/10/2026',dateKey:'20261010',voucher:'PXK-20261010-001',warehouse:'58',person:'A',reason:'Xuất bán',note:'Thanh xuất',code:'TD-1',name:'A',input:0,output:2,before:5,after:3},
+    {date:'10/10/2026',dateKey:'20261010',voucher:'PNK-20261010-002',warehouse:'58',person:'A',reason:'Đảo phiếu',note:'[CORRECT PXK-20261010-001] · REVERSAL',code:'TD-1',name:'A',input:2,output:0,before:3,after:5},
+    {date:'10/10/2026',dateKey:'20261010',voucher:'PXK-20261010-003',warehouse:'58',person:'A',reason:'Xuất bán',note:'[CORRECT PXK-20261010-001] · REPLACEMENT',code:'TD-1',name:'A',input:0,output:1,before:5,after:4},
+    {date:'10/10/2026',dateKey:'20261010',voucher:'PXK-20261010-004',warehouse:'58',person:'Kho 145',reason:'Chuyển qua kho',note:'DCK-20261010-005',code:'TD-2',name:'B',input:0,output:1,before:5,after:4}
+  ];
+  const transfers=[{date:'10/10/2026',dateKey:'20261010',transferId:'DCK-20261010-005',status:'COMPLETED',sourceWarehouse:'58',destinationWarehouse:'145',code:'TD-2',name:'B',qty:1,person:'Thanh',note:''}];
+  const d=voucherCenterBuildFromRowsV10140_(journal,transfers);
+  const root=d.find(function(x){return x.voucher==='PXK-20261010-001';}),dck=d.find(function(x){return x.voucher==='DCK-20261010-005';});
+  const t=[
+    {name:'group documents',pass:d.length===4},
+    {name:'corrected status',pass:root&&root.status==='CORRECTED'&&root.relatedVouchers.length===2},
+    {name:'exclude transfer sub voucher',pass:!d.some(function(x){return x.voucher==='PXK-20261010-004';})},
+    {name:'include DCK',pass:dck&&dck.type==='DCK'&&dck.totalQty===1}
+  ];
+  return {version:VOUCHER_CENTER_CONFIG_V10140.VERSION,total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
 }
 
 function aiChatGetVoucherV1107_(voucherText, warehouse) {
