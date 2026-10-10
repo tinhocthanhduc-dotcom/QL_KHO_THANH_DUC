@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.17.0';
+const APP_VERSION = 'V10.18.0';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -5834,7 +5834,7 @@ function voucherCountCorrectionSelfTestV10153_(){
   check('duplicate historical SKU blocked',function(){voucherCountCorrectionDeltaV10153_([orig[0],orig[0]],[{code:'TD-001',qty:8}]);return 'BAD';},'ERR');
   check('negative corrected count blocked',function(){voucherCountCorrectionDeltaV10153_(orig,[{code:'TD-001',qty:-1},{code:'TD-002',qty:2}]);return 'BAD';},'ERR');
   check('missing corrected SKU blocked',function(){voucherCountCorrectionDeltaV10153_(orig,[{code:'TD-001',qty:11}]);return 'BAD';},'ERR');
-  return {version:'V10.17.0',total:out.length,passed:out.filter(function(x){return x.pass;}).length,failed:out.filter(function(x){return !x.pass;}).length,pass:out.every(function(x){return x.pass;}),results:out};
+  return {version:'V10.18.0',total:out.length,passed:out.filter(function(x){return x.pass;}).length,failed:out.filter(function(x){return !x.pass;}).length,pass:out.every(function(x){return x.pass;}),results:out};
 }
 function prepareVoucherAdjustmentV10131(payload){
   payload=payload||{};
