@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.18.1</title>
+<title>QL KHO THÀNH ĐỨC · V10.18.2</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -381,7 +381,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 @media(max-width:1200px){.voucher-center-controls{grid-template-columns:repeat(3,minmax(0,1fr))}.voucher-center-controls input{grid-column:1/-1}.vc-report-grid{grid-template-columns:1fr}}
 @media(max-width:800px){.voucher-center-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.vc-flow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.voucher-center-controls{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.voucher-center-kpis,.vc-flow-kpis,.voucher-center-controls{grid-template-columns:1fr}}
-/* V10.18.1 Stage 6 print preview */
+/* V10.18.2 Stage 6 print preview */
 .voucher-print-preview-modal{width:min(1000px,96vw);max-height:94vh;display:flex;flex-direction:column;overflow:hidden;padding:0}
 .voucher-print-preview-header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid #e4e7ec}
 .voucher-print-preview-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid #e4e7ec}
@@ -393,7 +393,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 .voucher-print-preview-body.a5 .voucher-batch-page,.voucher-print-preview-body.a5 .voucher-print-sheet{max-width:148mm}
 .voucher-print-preview-body .voucher-batch-page>.voucher-print-sheet{max-width:none;box-shadow:none}
 @media print{#voucherPrintPreviewBack{display:none!important}#voucherPrintArea{width:100%!important;position:absolute!important;top:0!important;left:0!important}.voucher-print-sheet{padding:1mm 2mm!important}.voucher-print-table tr{break-inside:avoid;page-break-inside:avoid}.voucher-print-sign{break-inside:avoid;page-break-inside:avoid}body{margin:0!important}}
-/* V10.18.1 · Printed voucher with company identity. Scoped to tdp- only. */
+/* V10.18.2 · Printed voucher with company identity. Scoped to tdp- only. */
 .voucher-print-preview-body{overflow:auto;align-items:center}
 .voucher-print-preview-body .voucher-print-sheet,.voucher-print-preview-body .voucher-batch-page{width:100%;max-width:190mm;min-width:0}
 .voucher-print-preview-body.a5 .voucher-print-sheet,.voucher-print-preview-body.a5 .voucher-batch-page{max-width:128mm;min-width:0}
@@ -448,6 +448,19 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
   .tdp-table tr{break-inside:avoid;page-break-inside:avoid}
   .tdp-signatures{break-inside:avoid;page-break-inside:avoid}
   .tdp-table th,.tdp-table td,.tdp-meta{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+/* V10.18.2: print only actual voucher node; never print preview or application scaffolding. */
+@media print{
+  @page{size:A4 portrait;margin:10mm}
+  html,body{margin:0!important;padding:0!important;height:auto!important;min-height:0!important;overflow:visible!important;background:white!important}
+  body.printing-voucher> *:not(#voucherPrintArea){display:none!important}
+  body.printing-voucher #voucherPrintArea{display:block!important;position:static!important;left:auto!important;top:auto!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;overflow:visible!important;visibility:visible!important;background:white!important}
+  body.printing-voucher #voucherPrintArea *{visibility:visible!important}
+  body.printing-voucher #voucherPrintArea .voucher-print-sheet{display:block!important;width:100%!important;max-width:none!important;min-height:0!important;height:auto!important;margin:0!important;padding:0!important;box-shadow:none!important;overflow:visible!important}
+  body.printing-voucher #voucherPrintArea .voucher-batch-page{display:block!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;padding:0!important;margin:0!important;overflow:visible!important;break-after:page!important;page-break-after:always!important}
+  body.printing-voucher #voucherPrintArea .voucher-batch-page:last-child{break-after:auto!important;page-break-after:auto!important}
+  body.printing-voucher #voucherPrintArea .tdp-meta,body.printing-voucher #voucherPrintArea .tdp-signatures,body.printing-voucher #voucherPrintArea .tdp-table tr{break-inside:avoid;page-break-inside:avoid}
+  body.printing-voucher #voucherPrintArea .tdp-table thead{display:table-header-group}
 }
 </style>
 </head>
@@ -818,7 +831,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.18.1";
+let APP_VERSION="V10.18.2";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
@@ -1083,7 +1096,7 @@ function printSelectedVouchers(){
     var details=data.details||[];if(!details.length)return toast("Không tải được phiếu đã chọn");
     $("voucherPrintArea").innerHTML=details.map(function(d){return '<section class="voucher-batch-page">'+buildVoucherPrintHtml(d)+'</section>'}).join("");
     if((data.errors||[]).length)toast("Có "+fmt(data.errors.length)+" phiếu không tải được; sẽ in các phiếu còn lại");
-    openVoucherPrintPreview(details.length)
+    printVoucherNow()
   }).withFailureHandler(function(e){b.disabled=false;updateVoucherCenterSelectionUi();toast("Không chuẩn bị được bản in: "+errMsg(e))}).getInventoryVoucherDetailsBulk({vouchers:vouchers})
 }
 function voucherCenterStatusLabel(s){
@@ -1214,7 +1227,15 @@ function openVoucherPrintPreview(count){
   setVoucherPrintPaper($("voucherPaperSize").value);
   $("voucherPrintPreviewBack").classList.add("open");
 }
-function printVoucherDetail(){if(!voucherDetail)return toast("Chưa có phiếu để in");$("voucherPrintArea").innerHTML=buildVoucherPrintHtml(voucherDetail);openVoucherPrintPreview(1)}
+function printVoucherNow(){
+  const area=$("voucherPrintArea");
+  if(!area||!area.innerHTML.trim())return toast("Chưa có phiếu để in");
+  closeVoucherPrintPreview();
+  document.body.classList.add("printing-voucher");
+  requestAnimationFrame(function(){requestAnimationFrame(function(){window.print()})});
+}
+window.addEventListener("afterprint",function(){document.body.classList.remove("printing-voucher")});
+function printVoucherDetail(){if(!voucherDetail)return toast("Chưa có phiếu để in");$("voucherPrintArea").innerHTML=buildVoucherPrintHtml(voucherDetail);printVoucherNow()}
 function voucherEditableLines(){
   var by={},order=[],isCount=voucherDetail&&voucherDetail.operation==="ADJUST";(voucherDetail&&voucherDetail.rows||[]).forEach(function(r){var code=String(r.code||"").trim().toUpperCase(),qty=isCount?Number(r.after):Math.max(Number(r.input||0),Number(r.output||0));if(!code||!Number.isSafeInteger(qty)||qty<0||(!isCount&&qty===0))return;if(!by[code]){by[code]={code:code,name:r.name||"",qty:0};order.push(code)}if(isCount&&by[code].seen)throw new Error("Phiếu KK có mã trùng");by[code].seen=true;by[code].qty+=qty});return order.map(function(code){return by[code]})
 }
