@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.13.1';
+const APP_VERSION = 'V10.13.2';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -4734,8 +4734,8 @@ function aiExecuteBatchPreview_(preview) {
   try {
     if (!preview || !preview.ready || !Array.isArray(preview.slips) || !preview.slips.length) throw coreRuleError_('R45','Preview không hợp lệ để commit.');
     if(preview.historicalGuard&&preview.historicalGuard.originalVoucher){
-      const lifecycle=inventoryVoucherLifecycleV10131_(preview.historicalGuard.originalVoucher);
-      if(lifecycle.status!=='POSTED')throw coreRuleError_('R50','Phiếu '+preview.historicalGuard.originalVoucher+' đã '+(lifecycle.status==='VOIDED'?'được hoàn tác':'được sửa')+'. Hãy mở phiếu thay thế mới nhất trước khi thao tác tiếp.');
+      const lifecycle=inventoryDocumentLifecycleV10132_(preview.historicalGuard.originalVoucher);
+      if(lifecycle.status!=='POSTED')throw coreRuleError_('R50','Phiếu '+preview.historicalGuard.originalVoucher+' đã '+(lifecycle.status==='VOIDED'?'được hoàn tác':'được sửa')+'. Hãy mở chứng từ liên quan mới nhất trước khi thao tác tiếp.');
     }
     ledger = coreLedgerBegin_(preview);
 
@@ -5594,18 +5594,103 @@ function inventoryVoucherLifecycleV10131_(voucher){
   const data=getJournalHistory({warehouse:'all',query:voucher,allDates:true,limit:500});
   return inventoryVoucherLifecycleFromRowsV10131_(voucher,data.rows||[]);
 }
+
+function inventoryTransferLifecycleFromRowsV10132_(voucher,rows){
+  voucher=String(voucher||'').trim().toUpperCase();rows=Array.isArray(rows)?rows:[];
+  const related=[],seen={};let hasVoid=false;
+  rows.forEach(function(r){
+    const id=String(r.transferId||'').trim().toUpperCase(),text=String(r.note||'').toUpperCase();
+    if(!id||id===voucher)return;
+    if(text.indexOf('[VOID '+voucher+']')>=0){hasVoid=true;if(!seen[id]){seen[id]=1;related.push(id);}}
+  });
+  return {voucher:voucher,status:hasVoid?'VOIDED':'POSTED',relatedVouchers:related,hasAdjustment:hasVoid};
+}
+function inventoryTransferLifecycleV10132_(voucher){
+  voucher=String(voucher||'').trim().toUpperCase();
+  const data=getTransferHistory({query:voucher,limit:1000});
+  return inventoryTransferLifecycleFromRowsV10132_(voucher,data.rows||[]);
+}
+function inventoryDocumentLifecycleV10132_(voucher){
+  voucher=String(voucher||'').trim().toUpperCase();
+  return /^DCK-/.test(voucher)?inventoryTransferLifecycleV10132_(voucher):inventoryVoucherLifecycleV10131_(voucher);
+}
+function inventoryGetTransferVoucherV10132_(voucher){
+  voucher=String(voucher||'').trim().toUpperCase();
+  const data=getTransferHistory({query:voucher,limit:1000});
+  const rows=(data.rows||[]).filter(function(r){return String(r.transferId||'').trim().toUpperCase()===voucher&&String(r.status||'').toUpperCase()==='COMPLETED';});
+  if(!rows.length)return null;
+  const first=rows[0],life=inventoryTransferLifecycleFromRowsV10132_(voucher,data.rows||[]);
+  return {
+    voucher:voucher,operation:'TRANSFER',operationLabel:'PHIẾU ĐIỀU CHUYỂN',date:first.date||'',
+    warehouses:[first.sourceWarehouse,first.destinationWarehouse],warehouseLabel:'Kho '+first.sourceWarehouse+' → Kho '+first.destinationWarehouse,
+    sourceWarehouse:first.sourceWarehouse,destinationWarehouse:first.destinationWarehouse,counterparty:'Kho '+first.destinationWarehouse,
+    reason:'Điều chuyển kho',note:String(first.note||''),actor:String(first.person||''),totalLines:rows.length,
+    totalQty:rows.reduce(function(s,r){return s+toNumber_(r.qty);},0),originalImmutable:true,status:life.status,relatedVouchers:life.relatedVouchers,
+    rows:rows.map(function(r){return {
+      date:r.date,voucher:voucher,warehouse:r.sourceWarehouse,code:r.code,name:r.name,unit:r.unit||'',
+      input:0,output:toNumber_(r.qty),before:toNumber_(r.sourceBefore),after:toNumber_(r.sourceAfter),
+      sourceWarehouse:r.sourceWarehouse,destinationWarehouse:r.destinationWarehouse,sourceBefore:toNumber_(r.sourceBefore),sourceAfter:toNumber_(r.sourceAfter),
+      destinationBefore:toNumber_(r.destinationBefore),destinationAfter:toNumber_(r.destinationAfter),
+      counterparty:'Kho '+r.destinationWarehouse,reason:'Điều chuyển kho',note:String(r.note||'')
+    })
+  };
+}
+function inventoryAdjustmentReverseGroupsV10132_(rows){
+  rows=Array.isArray(rows)?rows:[];
+  const by={};
+  rows.forEach(function(r){
+    const code=String(r.code||'').trim().toUpperCase();if(!code)return;
+    let delta=0;
+    if(r.before!=null&&r.after!=null)delta=toNumber_(r.after)-toNumber_(r.before);
+    else delta=toNumber_(r.input)-toNumber_(r.output);
+    if(!by[code])by[code]={code:code,name:String(r.name||''),unit:String(r.unit||''),warehouse:String(r.warehouse||''),delta:0};
+    by[code].delta+=delta;
+  });
+  const groups={IN:[],OUT:[]};
+  Object.keys(by).forEach(function(code){const r=by[code];if(r.delta<0)groups.IN.push({code:r.code,name:r.name,unit:r.unit,warehouse:r.warehouse,quantity:Math.abs(r.delta)});if(r.delta>0)groups.OUT.push({code:r.code,name:r.name,unit:r.unit,warehouse:r.warehouse,quantity:r.delta});});
+  return groups;
+}
+function prepareSpecialVoucherVoidV10132_(payload,actor){
+  const voucher=String(payload.voucher||'').trim().toUpperCase(),reason=String(payload.reason||'').trim().slice(0,VOUCHER_ADJUST_CONFIG_V10131.MAX_REASON);
+  if(!reason)throw new Error('Vui lòng nhập lý do hoàn tác.');
+  if(/^DCK-/.test(voucher)){
+    const doc=inventoryGetTransferVoucherV10132_(voucher);if(!doc)throw new Error('Không tìm thấy DCK đã hoàn tất '+voucher+'.');
+    const life=inventoryTransferLifecycleV10132_(voucher);if(life.status!=='POSTED')throw new Error('Phiếu '+voucher+' đã được hoàn tác.');
+    const slip={slipNo:'R1',operation:'TRANSFER',sourceWarehouse:doc.destinationWarehouse,destinationWarehouse:doc.sourceWarehouse,warehouse:'',actor:actor,counterparty:'Kho '+doc.sourceWarehouse,businessReason:'Hoàn tác điều chuyển '+voucher,note:'[VOID '+voucher+'] · REVERSAL_TRANSFER · Lý do: '+reason,lines:doc.rows.map(function(r){return {code:r.code,quantity:Math.max(toNumber_(r.input),toNumber_(r.output)),itemText:r.code,sourceExcerpt:r.code};})};
+    const preview=aiBuildBatchLivePreview_({transactionDate:dateKey_(new Date()),command:'VOID '+voucher,slips:[slip]});
+    preview.originalVoucher=voucher;preview.correctionType='VOID';preview.historicalGuard={originalVoucher:voucher,action:'VOID'};preview.originalSummary=doc;preview.ruleSet=CORE_V105_CONFIG.RULESET_VERSION;preview.planVersion='VOUCHER_ADJUST_3C_TRANSFER';
+    return inventoryVoucherStorePreviewV10131_(preview);
+  }
+  const found=aiChatGetVoucherV1107_(voucher,'all');if(!found||!found.found)throw new Error(found&&found.message||('Không tìm thấy '+voucher+'.'));
+  const summary=inventoryVoucherSummaryV10130_(found);
+  if(summary.operation!=='ADJUST')return null;
+  const life=inventoryVoucherLifecycleV10131_(voucher);if(life.status!=='POSTED')throw new Error('Phiếu '+voucher+' đã được hoàn tác.');
+  if(summary.warehouses.length!==1)throw new Error('Phiếu kiểm kho nhiều kho chưa được hỗ trợ.');
+  const groups=inventoryAdjustmentReverseGroupsV10132_(found.rows||[]),slips=[],warehouse=summary.warehouses[0],note='[VOID '+voucher+'] · REVERSAL_DELTA · Lý do: '+reason;
+  if(groups.IN.length)slips.push({slipNo:'RIN',operation:'IN',warehouse:warehouse,sourceWarehouse:'',destinationWarehouse:'',actor:actor,counterparty:'Hoàn tác '+voucher,businessReason:'Hoàn tác kiểm kho '+voucher,note:note,lines:groups.IN.map(function(l){return {code:l.code,quantity:l.quantity,itemText:l.code,sourceExcerpt:l.code};})});
+  if(groups.OUT.length)slips.push({slipNo:'ROUT',operation:'OUT',warehouse:warehouse,sourceWarehouse:'',destinationWarehouse:'',actor:actor,counterparty:'Hoàn tác '+voucher,businessReason:'Hoàn tác kiểm kho '+voucher,note:note,lines:groups.OUT.map(function(l){return {code:l.code,quantity:l.quantity,itemText:l.code,sourceExcerpt:l.code};})});
+  if(!slips.length)throw new Error('Phiếu kiểm kho không tạo thay đổi tồn nên không có bút toán cần hoàn tác.');
+  const preview=aiBuildBatchLivePreview_({transactionDate:dateKey_(new Date()),command:'VOID '+voucher,slips:slips});
+  preview.originalVoucher=voucher;preview.correctionType='VOID';preview.historicalGuard={originalVoucher:voucher,action:'VOID'};preview.originalSummary=summary;preview.ruleSet=CORE_V105_CONFIG.RULESET_VERSION;preview.planVersion='VOUCHER_ADJUST_3C_COUNT_DELTA';
+  return inventoryVoucherStorePreviewV10131_(preview);
+}
+
 function getInventoryVoucherDetail(payload){
   payload=payload||{};
   const voucher=String(payload.voucher||payload.query||'').trim().toUpperCase();
   if(!voucher)throw new Error('Thiếu số phiếu cần xem.');
+  if(/^DCK-/.test(voucher)){
+    const doc=inventoryGetTransferVoucherV10132_(voucher);if(!doc)throw new Error('Không tìm thấy đúng số phiếu '+voucher+'.');
+    return Object.assign({},doc,{canPrint:true,canEdit:false,canVoid:doc.status==='POSTED',phase:'3C',correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,loadedAt:Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')});
+  }
   const found=aiChatGetVoucherV1107_(voucher,'all');
   if(!found||!found.found){
     if(found&&found.ambiguous)throw new Error(found.message||'Có nhiều phiếu trùng tham chiếu.');
     throw new Error(found&&found.message||('Không tìm thấy phiếu '+voucher+'.'));
   }
-  const summary=inventoryVoucherSummaryV10130_(found);
-  const lifecycle=inventoryVoucherLifecycleV10131_(summary.voucher);
-  const supported=['IN','OUT'].indexOf(summary.operation)>=0&&summary.warehouses.length===1;
+  const summary=inventoryVoucherSummaryV10130_(found),lifecycle=inventoryVoucherLifecycleV10131_(summary.voucher);
+  const standard=['IN','OUT'].indexOf(summary.operation)>=0&&summary.warehouses.length===1;
+  const countVoid=summary.operation==='ADJUST'&&summary.warehouses.length===1;
   return Object.assign({},summary,{
     status:lifecycle.status,relatedVouchers:lifecycle.relatedVouchers,
     rows:(found.rows||[]).map(function(r){return {
@@ -5614,7 +5699,7 @@ function getInventoryVoucherDetail(payload){
       before:r.before==null?null:toNumber_(r.before),after:r.after==null?null:toNumber_(r.after),
       counterparty:inventoryVoucherCounterpartyV10131_(r),reason:inventoryVoucherReasonV10131_(r),note:inventoryVoucherUserNoteV10131_(r)
     };}),
-    canPrint:true,canEdit:supported&&lifecycle.status==='POSTED',canVoid:supported&&lifecycle.status==='POSTED',phase:'3B',
+    canPrint:true,canEdit:standard&&lifecycle.status==='POSTED',canVoid:(standard||countVoid)&&lifecycle.status==='POSTED',phase:'3C',
     correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,
     loadedAt:Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')
   });
@@ -5660,6 +5745,10 @@ function prepareVoucherAdjustmentV10131(payload){
   if(!voucher)throw new Error('Thiếu số phiếu.');
   if(!actor)throw new Error('Thiếu người thực hiện điều chỉnh.');
   coreRequirePermissionV109_('ADJUST',actor,'prepareVoucherAdjustmentV10131',action+' '+voucher);
+  if(action==='VOID'&&(/^DCK-/.test(voucher)||/^KK-/.test(voucher))){
+    const special=prepareSpecialVoucherVoidV10132_(payload,actor);if(special)return special;
+  }
+  if(action==='CORRECT'&&(/^DCK-/.test(voucher)||/^KK-/.test(voucher)))throw new Error('Phase 3C hiện chỉ hỗ trợ Hoàn tác an toàn cho DCK/KK; chưa sửa trực tiếp hai loại phiếu này.');
   const found=aiChatGetVoucherV1107_(voucher,'all');
   if(!found||!found.found)throw new Error(found&&found.message||('Không tìm thấy '+voucher+'.'));
   const summary=inventoryVoucherSummaryV10130_(found);
@@ -5726,6 +5815,24 @@ function voucherAdjustmentSelfTestV10131_(){
     {name:'note extraction',pass:s58.note==='test'&&s145.note==='test'}
   ];
   return {version:VOUCHER_ADJUST_CONFIG_V10131.VERSION,total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
+}
+
+
+function voucherPhase3CSelfTestV10132_(){
+  const life=inventoryTransferLifecycleFromRowsV10132_('DCK-20261010-001',[
+    {transferId:'DCK-20261010-001',note:'gốc'},
+    {transferId:'DCK-20261010-002',note:'[VOID DCK-20261010-001] · REVERSAL_TRANSFER'}
+  ]);
+  const groups=inventoryAdjustmentReverseGroupsV10132_([
+    {code:'TD-1',warehouse:'58',before:10,after:7,input:0,output:3},
+    {code:'TD-2',warehouse:'58',before:4,after:9,input:5,output:0}
+  ]);
+  const t=[
+    {name:'DCK lifecycle voided',pass:life.status==='VOIDED'&&life.relatedVouchers[0]==='DCK-20261010-002'},
+    {name:'KK decrease reverses IN',pass:groups.IN.length===1&&groups.IN[0].code==='TD-1'&&groups.IN[0].quantity===3},
+    {name:'KK increase reverses OUT',pass:groups.OUT.length===1&&groups.OUT[0].code==='TD-2'&&groups.OUT[0].quantity===5}
+  ];
+  return {version:'VOUCHER_PHASE3C_2026-10-10',total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
 }
 
 function aiChatGetVoucherV1107_(voucherText, warehouse) {
