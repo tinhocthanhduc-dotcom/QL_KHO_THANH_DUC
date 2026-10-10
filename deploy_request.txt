@@ -1,5 +1,5 @@
-Deploy requested by ChatGPT after user approval.
+Deploy requested by ChatGPT after CI/regression success.
 Target: Apps Script production
 Source branch: dev-v10.10.6
-Version: V10.14.2 same-day Voucher Center UX
+Version: V10.15.0 Voucher Center 4C reports and controls
 Requested: 2026-10-10 22:02 +07
