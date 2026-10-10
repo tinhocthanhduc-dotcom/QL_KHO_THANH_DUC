@@ -41,8 +41,8 @@ jobs:
           pathlib.Path('/tmp/index_scripts.js').write_text('\n'.join(blocks), encoding='utf-8')
           subprocess.check_call(['node','--check','/tmp/index_scripts.js'])
           PY
-          grep -q "const APP_VERSION = 'V10.13.1';" code.js
-          grep -q 'let APP_VERSION="V10.13.1";' Index.html
+          grep -q "const APP_VERSION = 'V10.13.2';" code.js
+          grep -q 'let APP_VERSION="V10.13.2";' Index.html
 
       - name: Regression checks
         shell: bash
@@ -59,6 +59,7 @@ jobs:
           const manualSuite = manualInventorySelfTestV10122_();
           const voucherSuite = inventoryVoucherPhase3ASelfTestV10130_();
           const voucherAdjustSuite = voucherAdjustmentSelfTestV10131_();
+          const voucher3CSuite = voucherPhase3CSelfTestV10132_();
           if (!oldSuite.pass) process.exit(11);
           if (!resolverSuite.pass) process.exit(12);
           if (!historicalSuite.pass) process.exit(13);
@@ -68,6 +69,7 @@ jobs:
           if (!manualSuite.pass) { console.error(JSON.stringify(manualSuite)); process.exit(17); }
           if (!voucherSuite.pass) { console.error(JSON.stringify(voucherSuite)); process.exit(18); }
           if (!voucherAdjustSuite.pass) { console.error(JSON.stringify(voucherAdjustSuite)); process.exit(19); }
+          if (!voucher3CSuite.pass) { console.error(JSON.stringify(voucher3CSuite)); process.exit(20); }
           console.log('Core:', oldSuite.passed + '/' + oldSuite.total, 'PASS');
           console.log('Resolver:', resolverSuite.passed + '/' + resolverSuite.total, 'PASS');
           console.log('Historical:', historicalSuite.passed + '/' + historicalSuite.total, 'PASS');
@@ -77,6 +79,7 @@ jobs:
           console.log('Manual Inventory:', manualSuite.passed + '/' + manualSuite.total, 'PASS');
           console.log('Voucher UI 3A:', voucherSuite.passed + '/' + voucherSuite.total, 'PASS');
           console.log('Voucher 3B:', voucherAdjustSuite.passed + '/' + voucherAdjustSuite.total, 'PASS');
+          console.log('Voucher 3C:', voucher3CSuite.passed + '/' + voucher3CSuite.total, 'PASS');
           JS
           node /tmp/regression_test.js
 
@@ -87,5 +90,5 @@ jobs:
           git config user.name "ChatGPT AI Patch"
           git config user.email "ai-patch@users.noreply.github.com"
           git add -A
-          git commit -m "V10.13.1: Voucher management Phase 3B [ai-applied]"
+          git commit -m "V10.13.2: Voucher management Phase 3C [ai-applied]"
           git push origin HEAD:dev-v10.10.6
