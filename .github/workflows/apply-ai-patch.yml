@@ -41,8 +41,8 @@ jobs:
           pathlib.Path('/tmp/index_scripts.js').write_text('\n'.join(blocks), encoding='utf-8')
           subprocess.check_call(['node','--check','/tmp/index_scripts.js'])
           PY
-          grep -q "const APP_VERSION = 'V10.15.1';" code.js
-          grep -q 'let APP_VERSION="V10.15.1";' Index.html
+          grep -q "const APP_VERSION = 'V10.15.2';" code.js
+          grep -q 'let APP_VERSION="V10.15.2";' Index.html
 
       - name: Regression checks
         shell: bash
@@ -64,6 +64,7 @@ jobs:
           const voucherCenter4BSuite = voucherCenter4BSelfTestV10141_();
           const voucherCenter4CSuite = voucherCenter4CSelfTestV10150_();
           const voucherPhase5Suite = voucherCorrectionPhase5SelfTestV10151_();
+          const voucherDckSuite = voucherDckCorrectionSelfTestV10152_();
           if (!oldSuite.pass) process.exit(11);
           if (!resolverSuite.pass) process.exit(12);
           if (!historicalSuite.pass) process.exit(13);
@@ -78,6 +79,7 @@ jobs:
           if (!voucherCenter4BSuite.pass) { console.error(JSON.stringify(voucherCenter4BSuite)); process.exit(22); }
           if (!voucherCenter4CSuite.pass) { console.error(JSON.stringify(voucherCenter4CSuite)); process.exit(23); }
           if (!voucherPhase5Suite.pass) { console.error(JSON.stringify(voucherPhase5Suite)); process.exit(24); }
+          if (!voucherDckSuite.pass) { console.error(JSON.stringify(voucherDckSuite)); process.exit(25); }
           console.log('Core:', oldSuite.passed + '/' + oldSuite.total, 'PASS');
           console.log('Resolver:', resolverSuite.passed + '/' + resolverSuite.total, 'PASS');
           console.log('Historical:', historicalSuite.passed + '/' + historicalSuite.total, 'PASS');
@@ -92,6 +94,7 @@ jobs:
           console.log('Voucher Center 4B:', voucherCenter4BSuite.passed + '/' + voucherCenter4BSuite.total, 'PASS');
           console.log('Voucher Center 4C:', voucherCenter4CSuite.passed + '/' + voucherCenter4CSuite.total, 'PASS');
           console.log('Voucher correction Stage 5:', voucherPhase5Suite.passed + '/' + voucherPhase5Suite.total, 'PASS');
+          console.log('DCK correction Stage 5:', voucherDckSuite.passed + '/' + voucherDckSuite.total, 'PASS');
           JS
           node /tmp/regression_test.js
 
@@ -102,5 +105,5 @@ jobs:
           git config user.name "ChatGPT AI Patch"
           git config user.email "ai-patch@users.noreply.github.com"
           git add -A
-          git commit -m "V10.15.1: Voucher Center reports and controls [ai-applied]"
+          git commit -m "V10.15.2: Voucher Center reports and controls [ai-applied]"
           git push origin HEAD:dev-v10.10.6
