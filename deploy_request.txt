@@ -1,5 +1,5 @@
-Production deployment request
+Production deploy request
+Version: V10.16.0
+Stage 6: A4/A5 print preview, single and batch vouchers
 Branch: dev-v10.10.6
-Version: V10.15.3
-Stage: 5 - KK correction by relative delta; DCK/PNK/PXK preserved
-Run all regression and syntax checks before deploy.
+Run syntax and full regression gates before production.
