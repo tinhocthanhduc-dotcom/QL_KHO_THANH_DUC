@@ -5949,7 +5949,7 @@ function inventoryVoucherDetailFromDatasetsV10141_(voucher,journalRows,transferR
         sourceWarehouse:String(r.sourceWarehouse||''),destinationWarehouse:String(r.destinationWarehouse||''),
         sourceBefore:toNumber_(r.sourceBefore),sourceAfter:toNumber_(r.sourceAfter),destinationBefore:toNumber_(r.destinationBefore),destinationAfter:toNumber_(r.destinationAfter),
         counterparty:'Kho '+String(r.destinationWarehouse||''),reason:'Điều chuyển kho',note:String(r.note||'')
-      }),
+      };}),
       canPrint:true,canEdit:false,canVoid:life.status==='POSTED',phase:'4B'
     };
   }
@@ -5963,7 +5963,7 @@ function inventoryVoucherDetailFromDatasetsV10141_(voucher,journalRows,transferR
       date:r.date,voucher:r.voucher,warehouse:String(r.warehouse||''),code:String(r.code||''),name:String(r.name||''),unit:String(r.unit||''),
       type:String(r.type||''),input:toNumber_(r.input),output:toNumber_(r.output),before:r.before==null?null:toNumber_(r.before),after:r.after==null?null:toNumber_(r.after),
       counterparty:inventoryVoucherCounterpartyV10131_(r),reason:inventoryVoucherReasonV10131_(r),note:inventoryVoucherUserNoteV10131_(r)
-    }),
+    };}),
     canPrint:true,canEdit:standard&&life.status==='POSTED',canVoid:(standard||countVoid)&&life.status==='POSTED',phase:'4B'
   });
 }
