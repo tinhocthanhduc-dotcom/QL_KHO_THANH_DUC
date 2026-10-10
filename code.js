@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.14.0';
+const APP_VERSION = 'V10.14.1';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -5926,6 +5926,80 @@ function getVoucherCenter(payload){
   const limit=Math.max(1,Math.min(1000,Math.floor(toNumber_(payload.limit)||500)));rows=rows.slice(0,limit);
   return {version:VOUCHER_CENTER_CONFIG_V10140.VERSION,rows:rows,counts:counts,totalMatches:counts.total,returnedCount:rows.length,truncated:counts.total>limit,loadedAt:Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')};
 }
+
+function inventoryVoucherDetailFromDatasetsV10141_(voucher,journalRows,transferRows){
+  voucher=String(voucher||'').trim().toUpperCase();
+  journalRows=Array.isArray(journalRows)?journalRows:[];
+  transferRows=Array.isArray(transferRows)?transferRows:[];
+  if(!voucher)throw new Error('Thiếu số phiếu.');
+  if(/^DCK-/.test(voucher)){
+    const rows=transferRows.filter(function(r){return String(r.transferId||'').trim().toUpperCase()===voucher&&String(r.status||'').toUpperCase()==='COMPLETED';});
+    if(!rows.length)throw new Error('Không tìm thấy DCK '+voucher+'.');
+    const f=rows[0],life=inventoryTransferLifecycleFromRowsV10132_(voucher,transferRows);
+    return {
+      voucher:voucher,operation:'TRANSFER',operationLabel:'PHIẾU ĐIỀU CHUYỂN',date:f.date||'',
+      warehouses:[String(f.sourceWarehouse||''),String(f.destinationWarehouse||'')],
+      warehouseLabel:'Kho '+String(f.sourceWarehouse||'')+' → Kho '+String(f.destinationWarehouse||''),
+      sourceWarehouse:String(f.sourceWarehouse||''),destinationWarehouse:String(f.destinationWarehouse||''),
+      counterparty:'Kho '+String(f.destinationWarehouse||''),reason:'Điều chuyển kho',note:String(f.note||''),actor:String(f.person||''),
+      totalLines:rows.length,totalQty:rows.reduce(function(s,r){return s+toNumber_(r.qty);},0),originalImmutable:true,status:life.status,relatedVouchers:life.relatedVouchers,
+      rows:rows.map(function(r){return {
+        date:r.date,voucher:voucher,warehouse:String(r.sourceWarehouse||''),code:String(r.code||''),name:String(r.name||''),unit:String(r.unit||''),
+        input:0,output:toNumber_(r.qty),before:toNumber_(r.sourceBefore),after:toNumber_(r.sourceAfter),
+        sourceWarehouse:String(r.sourceWarehouse||''),destinationWarehouse:String(r.destinationWarehouse||''),
+        sourceBefore:toNumber_(r.sourceBefore),sourceAfter:toNumber_(r.sourceAfter),destinationBefore:toNumber_(r.destinationBefore),destinationAfter:toNumber_(r.destinationAfter),
+        counterparty:'Kho '+String(r.destinationWarehouse||''),reason:'Điều chuyển kho',note:String(r.note||'')
+      }),
+      canPrint:true,canEdit:false,canVoid:life.status==='POSTED',phase:'4B'
+    };
+  }
+  const rows=journalRows.filter(function(r){return String(r.voucher||'').trim().toUpperCase()===voucher;});
+  if(!rows.length)throw new Error('Không tìm thấy phiếu '+voucher+'.');
+  const summary=inventoryVoucherSummaryV10130_({voucher:voucher,rows:rows}),life=inventoryVoucherLifecycleFromRowsV10131_(voucher,journalRows);
+  const standard=['IN','OUT'].indexOf(summary.operation)>=0&&summary.warehouses.length===1,countVoid=summary.operation==='ADJUST'&&summary.warehouses.length===1;
+  return Object.assign({},summary,{
+    status:life.status,relatedVouchers:life.relatedVouchers,
+    rows:rows.map(function(r){return {
+      date:r.date,voucher:r.voucher,warehouse:String(r.warehouse||''),code:String(r.code||''),name:String(r.name||''),unit:String(r.unit||''),
+      type:String(r.type||''),input:toNumber_(r.input),output:toNumber_(r.output),before:r.before==null?null:toNumber_(r.before),after:r.after==null?null:toNumber_(r.after),
+      counterparty:inventoryVoucherCounterpartyV10131_(r),reason:inventoryVoucherReasonV10131_(r),note:inventoryVoucherUserNoteV10131_(r)
+    }),
+    canPrint:true,canEdit:standard&&life.status==='POSTED',canVoid:(standard||countVoid)&&life.status==='POSTED',phase:'4B'
+  });
+}
+function getInventoryVoucherDetailsBulk(payload){
+  payload=payload||{};
+  const source=Array.isArray(payload.vouchers)?payload.vouchers:[],seen={},vouchers=[];
+  source.forEach(function(v){v=String(v||'').trim().toUpperCase();if(v&&!seen[v]){seen[v]=1;vouchers.push(v);}});
+  if(!vouchers.length)throw new Error('Chưa chọn phiếu để in.');
+  if(vouchers.length>12)throw new Error('Mỗi lần in tối đa 12 phiếu.');
+  const journal=getJournalHistory({warehouse:'all',allDates:true,limit:VOUCHER_CENTER_CONFIG_V10140.JOURNAL_LIMIT});
+  const transfer=getTransferHistory({limit:VOUCHER_CENTER_CONFIG_V10140.TRANSFER_LIMIT});
+  const details=[],errors=[];
+  vouchers.forEach(function(v){
+    try{details.push(inventoryVoucherDetailFromDatasetsV10141_(v,journal.rows||[],transfer.rows||[]));}
+    catch(e){errors.push({voucher:v,message:String(e&&e.message||e)});}
+  });
+  return {details:details,errors:errors,requested:vouchers.length,returned:details.length,loadedAt:Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')};
+}
+function voucherCenter4BSelfTestV10141_(){
+  const journal=[
+    {date:'10/10/2026',dateKey:'20261010',voucher:'PNK-20261010-001',warehouse:'58',person:'Đức Lan',reason:'Nhập hàng',note:'Thanh nhận; ghi thẳng sổ chính',code:'TD-1',name:'Hàng A',unit:'Hộp',input:3,output:0,before:2,after:5},
+    {date:'10/10/2026',dateKey:'20261010',voucher:'PXK-20261010-002',warehouse:'58',person:'Khách',reason:'Xuất bán',note:'Tuấn xuất; ghi thẳng sổ chính',code:'TD-2',name:'Hàng B',unit:'Hộp',input:0,output:2,before:5,after:3}
+  ];
+  const transfers=[
+    {date:'10/10/2026',dateKey:'20261010',transferId:'DCK-20261010-003',status:'COMPLETED',sourceWarehouse:'58',destinationWarehouse:'145',code:'TD-3',name:'Hàng C',unit:'Hộp',qty:4,sourceBefore:10,sourceAfter:6,destinationBefore:1,destinationAfter:5,person:'Phong',note:''}
+  ];
+  const p=inventoryVoucherDetailFromDatasetsV10141_('PNK-20261010-001',journal,transfers);
+  const d=inventoryVoucherDetailFromDatasetsV10141_('DCK-20261010-003',journal,transfers);
+  const t=[
+    {name:'PNK detail',pass:p.operation==='IN'&&p.totalQty===3&&p.actor==='Thanh'},
+    {name:'DCK detail',pass:d.operation==='TRANSFER'&&d.totalQty===4&&d.rows[0].destinationAfter===5},
+    {name:'print flags',pass:p.canPrint===true&&d.canPrint===true}
+  ];
+  return {version:'VOUCHER_CENTER_4B_2026-10-10',total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
+}
+
 function voucherCenterSelfTestV10140_(){
   const journal=[
     {date:'10/10/2026',dateKey:'20261010',voucher:'PXK-20261010-001',warehouse:'58',person:'A',reason:'Xuất bán',note:'Thanh xuất',code:'TD-1',name:'A',input:0,output:2,before:5,after:3},
