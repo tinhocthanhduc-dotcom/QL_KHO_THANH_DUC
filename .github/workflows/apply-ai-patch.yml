@@ -41,8 +41,8 @@ jobs:
           pathlib.Path('/tmp/index_scripts.js').write_text('\n'.join(blocks), encoding='utf-8')
           subprocess.check_call(['node','--check','/tmp/index_scripts.js'])
           PY
-          grep -q "const APP_VERSION = 'V10.12.1';" code.js
-          grep -q 'let APP_VERSION="V10.12.1";' Index.html
+          grep -q "const APP_VERSION = 'V10.12.2';" code.js
+          grep -q 'let APP_VERSION="V10.12.2";' Index.html
 
       - name: Regression checks
         shell: bash
@@ -56,18 +56,21 @@ jobs:
           const commandResolverV3 = aiCommandResolverV3SelfTest_();
           const learningSuite = aiLearningMemorySelfTestV10109_();
           const smartSuite = aiSmartAgentSelfTestV10110_();
+          const manualSuite = manualInventorySelfTestV10122_();
           if (!oldSuite.pass) process.exit(11);
           if (!resolverSuite.pass) process.exit(12);
           if (!historicalSuite.pass) process.exit(13);
           if (!commandResolverV3.pass) process.exit(14);
           if (!learningSuite.pass) process.exit(15);
           if (!smartSuite.pass) { console.error(JSON.stringify(smartSuite)); process.exit(16); }
+          if (!manualSuite.pass) { console.error(JSON.stringify(manualSuite)); process.exit(17); }
           console.log('Core:', oldSuite.passed + '/' + oldSuite.total, 'PASS');
           console.log('Resolver:', resolverSuite.passed + '/' + resolverSuite.total, 'PASS');
           console.log('Historical:', historicalSuite.passed + '/' + historicalSuite.total, 'PASS');
           console.log('Command V3:', commandResolverV3.passed + '/' + commandResolverV3.total, 'PASS');
           console.log('Learning:', learningSuite.passed + '/' + learningSuite.total, 'PASS');
           console.log('Smart Agent:', smartSuite.passed + '/' + smartSuite.total, 'PASS');
+          console.log('Manual Inventory:', manualSuite.passed + '/' + manualSuite.total, 'PASS');
           JS
           node /tmp/regression_test.js
 
@@ -78,5 +81,5 @@ jobs:
           git config user.name "ChatGPT AI Patch"
           git config user.email "ai-patch@users.noreply.github.com"
           git add -A
-          git commit -m "V10.12.1: Nhap Xuat UX polish [ai-applied]"
+          git commit -m "V10.12.2: Manual inventory Phase 2 [ai-applied]"
           git push origin HEAD:dev-v10.10.6
