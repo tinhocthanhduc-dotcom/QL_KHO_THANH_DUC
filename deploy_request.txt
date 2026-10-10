@@ -1,5 +1,5 @@
 Production deploy request
-Version: V10.16.0
-Stage 6: A4/A5 print preview, single and batch vouchers
+Version: V10.17.0
+Stage: 7 UX enhancements - copy PNK/PXK as draft, barcode SKU + Enter, shortcut
 Branch: dev-v10.10.6
 Run syntax and full regression gates before production.
