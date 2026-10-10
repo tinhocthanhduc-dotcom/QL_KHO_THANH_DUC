@@ -1,5 +1,5 @@
 Deploy requested by ChatGPT after user approval.
 Target: Apps Script production
 Source branch: dev-v10.10.6
-Version: V10.14.0 Voucher Center Phase 4A
-Requested: 2026-10-10 21:37 +07
+Version: V10.14.1 Voucher Center Phase 4B
+Requested: 2026-10-10 21:49 +07
