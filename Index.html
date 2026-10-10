@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.16.0</title>
+<title>QL KHO THÀNH ĐỨC · V10.17.0</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -381,7 +381,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 @media(max-width:1200px){.voucher-center-controls{grid-template-columns:repeat(3,minmax(0,1fr))}.voucher-center-controls input{grid-column:1/-1}.vc-report-grid{grid-template-columns:1fr}}
 @media(max-width:800px){.voucher-center-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.vc-flow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.voucher-center-controls{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.voucher-center-kpis,.vc-flow-kpis,.voucher-center-controls{grid-template-columns:1fr}}
-/* V10.16.0 Stage 6 print preview */
+/* V10.17.0 Stage 6 print preview */
 .voucher-print-preview-modal{width:min(1000px,96vw);max-height:94vh;display:flex;flex-direction:column;overflow:hidden;padding:0}
 .voucher-print-preview-header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid #e4e7ec}
 .voucher-print-preview-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid #e4e7ec}
@@ -579,7 +579,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
         <div class="io-items">
           <div class="io-items-head"><div><h3>Hàng hóa</h3><div class="note">Tìm theo mã TD, tên hàng, model hoặc alias. Enter để thêm nhanh khi chỉ còn một kết quả.</div></div><div style="display:flex;gap:7px;align-items:center"><button class="mini primary" id="ioFocusSearch" type="button">＋ Thêm hàng</button><span class="pill" id="ioLineCount">0 dòng</span></div></div>
           <div class="io-search-wrap">
-            <input id="ioSearch" autocomplete="off" placeholder="🔎 Tìm mã / tên / model / alias...">
+            <input id="ioSearch" autocomplete="off" placeholder="🔎 Tìm mã / tên / model / alias hoặc quét barcode + Enter...">
             <div class="io-search-results" id="ioSearchResults"></div>
           </div>
           <div class="table-wrap io-cart-wrap">
@@ -688,7 +688,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
       <div class="table-wrap voucher-table-wrap"><table id="voucherLinesTable"><thead><tr><th>Mã</th><th>Hàng hóa</th><th>Kho</th><th class="num">Nhập</th><th class="num">Xuất</th><th class="num">Tồn trước</th><th class="num">Tồn sau</th></tr></thead><tbody></tbody></table></div>
       <div class="voucher-policy">🔒 <strong>Chứng từ gốc là bất biến.</strong> Khi mở chức năng sửa/hoàn tác ở Phase 3B, hệ thống sẽ tạo bút toán bù và chứng từ liên kết; không xóa hay sửa trực tiếp dòng lịch sử cũ.</div>
       <div class="voucher-actions">
-        <button class="action" id="voucherPrint">🖨 In phiếu</button>
+        <button class="action" id="voucherPrint">🖨 In phiếu</button><button class="action" id="voucherCopy">📋 Sao chép phiếu</button>
         <button class="action" id="voucherEdit" disabled>✏ Sửa phiếu</button>
         <button class="action warn" id="voucherVoid" disabled>↩ Hoàn tác</button>
       </div>
@@ -762,7 +762,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.16.0";
+let APP_VERSION="V10.17.0";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
@@ -1336,6 +1336,27 @@ function ioSyncReasonOptions(){var el=$("ioReason");if(!el)return;var keep=ioDra
 function ioSetMode(mode,mark){if(mark===undefined)mark=true;ioDraft.mode=mode==="OUT"?"OUT":"IN";if($("ioModeIn"))$("ioModeIn").classList.toggle("active",ioDraft.mode==="IN");if($("ioModeOut"))$("ioModeOut").classList.toggle("active",ioDraft.mode==="OUT");if($("ioModeHint"))$("ioModeHint").textContent=ioDraft.mode==="IN"?"Tăng tồn tại kho đã chọn":"Giảm tồn tại kho đã chọn · không cho phép âm kho";if($("ioPreviewType")){$("ioPreviewType").textContent=ioDraft.mode==="IN"?"NHẬP":"XUẤT";$("ioPreviewType").className="badge "+(ioDraft.mode==="IN"?"ok":"warn")}if($("ioCounterpartyLabel"))$("ioCounterpartyLabel").textContent=ioDraft.mode==="IN"?"Nhà cung cấp / nguồn nhập":"Khách hàng / đối tượng nhận";if($("ioCounterparty"))$("ioCounterparty").placeholder=ioDraft.mode==="IN"?"Ví dụ: Đức Lan, Nhất Phong...":"Ví dụ: TikTok, A Lên, khách lẻ...";ioSyncReasonOptions();ioRenderCart();if(mark)ioMarkChanged()}
 function ioSnapshotFromForm(){ioDraft.warehouse=$("ioWarehouse")&&$("ioWarehouse").value||"58";ioDraft.date=$("ioDate")&&$("ioDate").value||todayIso();ioDraft.counterparty=$("ioCounterparty")&&$("ioCounterparty").value.trim()||"";ioDraft.person=$("ioPerson")&&$("ioPerson").value.trim()||"";ioDraft.reason=$("ioReason")&&$("ioReason").value||"";ioDraft.note=$("ioNote")&&$("ioNote").value.trim()||""}
 function ioApplyDraftToForm(){if($("ioWarehouse"))$("ioWarehouse").value=ioDraft.warehouse||"58";if($("ioDate"))$("ioDate").value=ioDraft.date||todayIso();if($("ioCounterparty"))$("ioCounterparty").value=ioDraft.counterparty||"";if($("ioPerson"))$("ioPerson").value=ioDraft.person||currentActor()||"";if($("ioNote"))$("ioNote").value=ioDraft.note||"";ioSetMode(ioDraft.mode,false);if($("ioReason"))$("ioReason").value=ioDraft.reason||$("ioReason").value}
+function ioCopyVoucherToDraft(){
+  const d=voucherDetail;
+  if(!d||!["IN","OUT"].includes(d.operation)||!d.rows||!d.rows.length)return toast("Chỉ sao chép phiếu nhập/xuất PNK, PXK.");
+  if(!canPerm(d.operation==="IN"?"INVENTORY_IN":"INVENTORY_OUT"))return toast("Không có quyền lập phiếu tương ứng.");
+  const wh=String(d.rows[0].warehouse||"").trim();
+  if(!["58","145"].includes(wh)||d.rows.some(r=>String(r.warehouse||"").trim()!==wh))return toast("Chỉ sao chép phiếu thuộc một kho.");
+  const lines=[],missing=[];
+  d.rows.forEach(r=>{
+    const master=ioFindMaster(r.code),qty=Number(d.operation==="IN"?r.input:r.output);
+    if(!master||!Number.isSafeInteger(qty)||qty<=0){missing.push(r.code||"?");return;}
+    const existing=lines.find(l=>norm(l.code)===norm(master.code));
+    if(existing)existing.qty+=qty;
+    else lines.push({code:master.code,name:master.name,unit:unitOf(master.code,master.name,master.unit),qty,price:Number(master.referencePrice||0)});
+  });
+  if(missing.length)return toast("Không sao chép được mã đã đổi hoặc thiếu dữ liệu: "+missing.slice(0,3).join(", "));
+  if(!lines.length)return toast("Không có dòng hàng hợp lệ để sao chép.");
+  if(ioDraft.lines.length&&!window.confirm("Thay bản nháp hiện tại bằng phiếu sao chép?"))return;
+  ioDraft.mode=d.operation;ioDraft.warehouse=wh;ioDraft.date=todayIso();ioDraft.counterparty=d.counterparty||"";ioDraft.person=currentActor()||"";ioDraft.reason=d.reason||"";ioDraft.note="Sao chép từ "+d.voucher;ioDraft.lines=lines;
+  ioApplyDraftToForm();ioRenderCart();ioInvalidateServerPreview("Cần xem trước");$("ioPreviewBody").innerHTML="Bản sao chỉ là nháp, chưa ghi kho. Kiểm tra thông tin và xem trước để lấy tồn live.";
+  closeVoucherDetail();document.querySelector('[data-tab="io"]')?.click();$("ioSearch").focus();toast("Đã sao chép "+d.voucher+" thành phiếu nháp · chưa ghi kho");
+}
 function ioFindMaster(code){return state.combined.find(function(x){return norm(x.code)===norm(code)})}
 function ioSearchItems(){var box=$("ioSearchResults"),input=$("ioSearch");if(!box||!input)return;var q=norm(input.value);if(!q){box.classList.remove("open");box.innerHTML="";return}var rows=state.combined.filter(function(x){return norm(x.code)===q||String(x.searchText||"").indexOf(q)>=0});rows.sort(function(a,b){var ae=norm(a.code)===q?0:1,be=norm(b.code)===q?0:1;return ae-be||String(a.name).localeCompare(String(b.name),"vi")});rows=rows.slice(0,10);box.innerHTML=rows.map(function(x){var qty=ioDraft.warehouse==="145"?x.qty145:x.qty58;var mapWarn=ioDraft.warehouse==="145"&&Number(x.mappingCount||0)!==1?'<span class="badge warn">Chưa map chuẩn</span>':"";return '<div class="io-search-item" data-io-add="'+esc(x.code)+'"><div class="io-search-code">'+esc(x.code)+'</div><div class="io-search-name"><strong>'+esc(x.name)+'</strong><span class="note">'+esc(unitOf(x.code,x.name,x.unit))+' '+mapWarn+'</span></div><div class="io-search-stock">Tồn kho '+esc(ioDraft.warehouse)+': <strong>'+fmt(qty)+'</strong></div></div>'}).join("")||'<div class="io-preview-empty">Không tìm thấy mặt hàng phù hợp.</div>';box.classList.add("open")}
 function ioFocusQty(code,selectAll){
@@ -1496,9 +1517,11 @@ function bindIoModule(){
   $("ioModeOut").onclick=function(){ioSetMode("OUT")};
   $("ioFocusSearch").onclick=function(){$("ioSearch").focus();$("ioSearch").scrollIntoView({block:"center",behavior:"smooth"})};
   $("ioSearch").addEventListener("input",ioSearchItems);
+  $("voucherCopy").onclick=ioCopyVoucherToDraft;
+  document.addEventListener("keydown",function(e){if(!(e.ctrlKey||e.metaKey)||!e.shiftKey||e.key.toLowerCase()!=="f"||!document.querySelector('[data-tab="io"]')?.classList.contains("active"))return;e.preventDefault();$("ioSearch").focus();$("ioSearch").select()});
   $("ioSearch").addEventListener("keydown",function(e){
     if(e.key!=="Enter")return;
-    var rows=$("ioSearchResults").querySelectorAll("[data-io-add]");
+    var raw=String($("ioSearch").value||"").trim(),direct=ioFindMaster(raw);if(direct){e.preventDefault();ioAddLine(direct.code);return}var rows=$("ioSearchResults").querySelectorAll("[data-io-add]");
     if(rows.length===1){e.preventDefault();ioAddLine(rows[0].dataset.ioAdd)}
     else if(rows.length>1){var q=norm($("ioSearch").value),exact=[].slice.call(rows).find(function(r){return norm(r.dataset.ioAdd)===q});if(exact){e.preventDefault();ioAddLine(exact.dataset.ioAdd)}}
   });
