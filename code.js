@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.12.4';
+const APP_VERSION = 'V10.13.0';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -5518,6 +5518,64 @@ function aiVoucherSuffixMatchV10108_(voucher,suffix,type) {
 function aiHistoricalVoucherRequestV1107_(text) {
   const n=normalize_(text);
   return /(sua|chinh sua|huy|xoa|void|dieu chinh).*(phieu|pxk|pnk|dck|kk)|(?:pxk|pnk|dck|kk).*?(sua|huy|xoa|void|dieu chinh)/.test(n);
+}
+
+
+function inventoryVoucherActorFromNoteV10130_(note){
+  const s=String(note||'').trim();
+  const m=s.match(/^(.+?)\s+(xuất|nhận|kiểm kho|chuyển kho);/i);
+  return m?String(m[1]||'').trim():'';
+}
+function inventoryVoucherSummaryV10130_(voucherData){
+  voucherData=voucherData||{};
+  const rows=Array.isArray(voucherData.rows)?voucherData.rows:[];
+  const first=rows[0]||{};
+  const voucher=String(voucherData.voucher||first.voucher||'').trim().toUpperCase();
+  const prefix=(voucher.match(/^(PXK|PNK|KK|DCK)/)||[])[1]||'';
+  const operation=prefix==='PXK'?'OUT':prefix==='PNK'?'IN':prefix==='KK'?'ADJUST':prefix==='DCK'?'TRANSFER':'';
+  const operationLabel=operation==='OUT'?'PHIẾU XUẤT KHO':operation==='IN'?'PHIẾU NHẬP KHO':operation==='ADJUST'?'PHIẾU KIỂM KHO':operation==='TRANSFER'?'PHIẾU ĐIỀU CHUYỂN':'PHIẾU KHO';
+  const warehouses=Array.from(new Set(rows.map(function(r){return String(r.warehouse||'').trim();}).filter(Boolean)));
+  const counterparty=String(first.person||'').trim();
+  const reason=String(first.reason||'').trim();
+  let actor='';
+  rows.some(function(r){actor=inventoryVoucherActorFromNoteV10130_(r.note);return Boolean(actor);});
+  const totalQty=rows.reduce(function(sum,r){return sum+Math.max(toNumber_(r.input),toNumber_(r.output));},0);
+  return {voucher:voucher,operation:operation,operationLabel:operationLabel,date:String(first.date||''),warehouses:warehouses,warehouseLabel:warehouses.length===1?'Kho '+warehouses[0]:warehouses.map(function(w){return 'Kho '+w;}).join(' / '),counterparty:counterparty,reason:reason,actor:actor,totalLines:rows.length,totalQty:totalQty,originalImmutable:true,status:'POSTED'};
+}
+function getInventoryVoucherDetail(payload){
+  payload=payload||{};
+  const voucher=String(payload.voucher||payload.query||'').trim().toUpperCase();
+  if(!voucher)throw new Error('Thiếu số phiếu cần xem.');
+  const found=aiChatGetVoucherV1107_(voucher,'all');
+  if(!found||!found.found){
+    if(found&&found.ambiguous)throw new Error(found.message||'Có nhiều phiếu trùng tham chiếu.');
+    throw new Error(found&&found.message||('Không tìm thấy phiếu '+voucher+'.'));
+  }
+  const summary=inventoryVoucherSummaryV10130_(found);
+  return Object.assign({},summary,{
+    rows:(found.rows||[]).map(function(r){return {
+      date:r.date,voucher:r.voucher,warehouse:String(r.warehouse||''),code:String(r.code||''),name:String(r.name||''),
+      unit:String(r.unit||''),type:String(r.type||''),input:toNumber_(r.input),output:toNumber_(r.output),
+      before:r.before==null?null:toNumber_(r.before),after:r.after==null?null:toNumber_(r.after),
+      counterparty:String(r.person||''),reason:String(r.reason||''),note:String(r.note||'')
+    };}),
+    canPrint:true,canEdit:false,canVoid:false,phase:'3A',
+    correctionPolicy:HISTORICAL_VOUCHER_CONFIG.POLICY,
+    loadedAt:Utilities.formatDate(new Date(),DASHBOARD_CONFIG.TIME_ZONE,'dd/MM/yyyy HH:mm:ss')
+  });
+}
+function inventoryVoucherPhase3ASelfTestV10130_(){
+  const d=inventoryVoucherSummaryV10130_({voucher:'PXK-20261010-006',rows:[
+    {date:'10/10/2026',warehouse:'58',voucher:'PXK-20261010-006',input:0,output:2,person:'TikTok',reason:'Gửi TikTok',note:'Thanh xuất; ghi thẳng sổ chính'},
+    {date:'10/10/2026',warehouse:'58',voucher:'PXK-20261010-006',input:0,output:3,person:'TikTok',reason:'Gửi TikTok',note:'Thanh xuất; ghi thẳng sổ chính'}
+  ]});
+  const t=[
+    {name:'operation OUT',pass:d.operation==='OUT'&&d.operationLabel==='PHIẾU XUẤT KHO'},
+    {name:'aggregate qty',pass:d.totalLines===2&&d.totalQty===5},
+    {name:'actor from note',pass:d.actor==='Thanh'},
+    {name:'counterparty/reason',pass:d.counterparty==='TikTok'&&d.reason==='Gửi TikTok'}
+  ];
+  return {version:'VOUCHER_UI_PHASE3A_2026-10-10',total:t.length,passed:t.filter(function(x){return x.pass;}).length,failed:t.filter(function(x){return !x.pass;}).length,pass:t.every(function(x){return x.pass;}),results:t};
 }
 
 function aiChatGetVoucherV1107_(voucherText, warehouse) {
