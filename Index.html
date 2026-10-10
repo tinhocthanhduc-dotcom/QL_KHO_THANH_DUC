@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>QL KHO THÀNH ĐỨC · V10.15.1</title>
+<title>QL KHO THÀNH ĐỨC · V10.15.2</title>
 <style>
 :root{
   --bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;
@@ -741,7 +741,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-let APP_VERSION="V10.15.1";
+let APP_VERSION="V10.15.2";
 const $=id=>document.getElementById(id);const fmt=v=>Number(v||0).toLocaleString("vi-VN");const money=v=>`${Math.round(Number(v||0)).toLocaleString("vi-VN")} đ`;
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function norm(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim()}
@@ -1089,7 +1089,7 @@ function openVoucherDetail(voucher){
     $("voucherRelations").innerHTML=related.length?'<span class="note">Chứng từ liên quan:</span>'+related.map(function(v){return '<button class="voucher-related-btn" type="button" data-voucher-open="'+esc(v)+'">'+esc(v)+'</button>'}).join(""):"";
     var allowAdjust=canPerm("ADJUST");
     $("voucherEdit").disabled=!(data.canEdit&&allowAdjust);$("voucherVoid").disabled=!(data.canVoid&&allowAdjust);
-    $("voucherEdit").title=!allowAdjust?"Cần quyền MANAGER/ADJUST":(!data.canEdit?(data.operation==="TRANSFER"||data.operation==="ADJUST"?"3C chỉ hỗ trợ hoàn tác an toàn cho loại phiếu này.":"Phiếu này không còn được sửa; hãy mở phiếu thay thế."):"");
+    $("voucherEdit").title=!allowAdjust?"Cần quyền MANAGER/ADJUST":(!data.canEdit?(data.operation==="ADJUST"?"3C chỉ hỗ trợ hoàn tác an toàn cho loại phiếu này.":"Phiếu này không còn được sửa; hãy mở phiếu thay thế."):"");
     $("voucherVoid").title=!allowAdjust?"Cần quyền MANAGER/ADJUST":(!data.canVoid?"Phiếu này không còn được hoàn tác.":"");
     $("voucherLoading").style.display="none";$("voucherContent").style.display="block";applyMobileTableLabels(table);
   }).withFailureHandler(function(e){$("voucherStatus").textContent="LỖI";$("voucherStatus").className="badge out";$("voucherLoading").textContent="Không tải được phiếu: "+errMsg(e)}).getInventoryVoucherDetail({voucher:voucher})
