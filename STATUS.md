@@ -2,7 +2,7 @@
 
 ## Phạm vi
 
-Bản vá V10.10.5.2 dựa trên main bb25855, nhánh fix/warehouse145-daily-counters. Không sửa AI_KHO, Kho/Finance/Điều phối, không thay tồn hoặc số lượng phiếu cũ.
+Bản vá V10.10.5.2 dựa trên main bb25855, nhánh fix/warehouse145-daily-counters. Không sửa AI_KHO, Finance hoặc Điều phối; chưa ghi dữ liệu Kho thật, không thay tồn hoặc số lượng phiếu cũ.
 
 Nguyên nhân trong code: Transaction Engine vẫn ghi F nhưng chỉ cộng D/E khi ngày đọc từ tiêu đề A1 bằng ngày phiếu. Tiêu đề cũ/trống làm bỏ qua D/E. Chưa trực tiếp xác nhận giá trị A1 hoặc nhật ký thực của 85A trên Google.
 
