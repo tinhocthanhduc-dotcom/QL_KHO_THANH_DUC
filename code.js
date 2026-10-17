@@ -5,7 +5,7 @@
 // QL KHO THÀNH ĐỨC · V10.10.2
 // Modular source generated from deploy/Code.gs. Copy ALL .gs files if using modular deployment.
 
-const APP_VERSION = 'V10.10.5.1';
+const APP_VERSION = 'V10.10.5.2';
 
 const DASHBOARD_CONFIG = Object.freeze({
   SPREADSHEET_ID: '1Nuwjjj2HpirYJA9YUppkQ_kSVpVo6LH4ShN14NkOMZU',
@@ -1123,6 +1123,62 @@ function readWarehouse145Date_(sheet) {
   const match = title.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (!match) return '';
   return match[3] + '-' + String(match[2]).padStart(2, '0') + '-' + String(match[1]).padStart(2, '0');
+}
+
+// D/E are a rebuildable projection of the Vietnam calendar day's journals.
+// Never infer their day from the report title, or increment a stale counter.
+function snapshotWarehouse145DailyCounters_(sheet) {
+  const count=Math.max(0,sheet.getLastRow()-WAREHOUSE_145_CONFIG.STOCK_FIRST_DATA_ROW+1);
+  const title=sheet.getRange('A1');
+  return {sheet:sheet,count:count,values:count?sheet.getRange(5,4,count,2).getValues():[],title:title.getValue(),titleFormula:title.getFormula(),started:false};
+}
+
+function planWarehouse145DailyCounters_(ss, todayKey) {
+  const sheet=ss.getSheetByName(WAREHOUSE_145_CONFIG.STOCK_SHEET);
+  if(!sheet || !ss.getSheetByName(WAREHOUSE_145_CONFIG.JOURNAL_SHEET))throw new Error('Thiếu TONKHO hoặc nhật ký Kho 145; chưa cập nhật tổng ngày.');
+  const count=Math.max(0,sheet.getLastRow()-4), names=count?sheet.getRange(5,2,count,1).getDisplayValues():[];
+  const totals={},byName={};
+  names.forEach(function(r,i){const name=normalize_(r[0]);if(!name)return;(byName[name]||(byName[name]=[])).push(i);});
+  const journal=dedupeJournalHistory_([].concat(
+    readJournalBackup145_(ss.getSheetByName(WAREHOUSE_145_CONFIG.JOURNAL_BACKUP_SHEET),sheet,WAREHOUSE_145_CONFIG.JOURNAL_BACKUP_SHEET,todayKey,todayKey),
+    readJournalBackup145_(ss.getSheetByName(WAREHOUSE_145_CONFIG.JOURNAL_SHEET),sheet,WAREHOUSE_145_CONFIG.JOURNAL_SHEET,todayKey,todayKey)));
+  let unmatched=0;
+  journal.forEach(function(r){
+    const name=normalize_(r.sourceName),positions=byName[name];
+    if(!positions){unmatched++;return;}
+    if(positions.length!==1)throw new Error('Tên hàng Kho 145 trùng dòng, không thể tính tổng ngày: '+r.sourceName);
+    const t=totals[positions[0]]||(totals[positions[0]]=[0,0]);t[0]+=toNumber_(r.input);t[1]+=toNumber_(r.output);
+  });
+  return {sheet:sheet,date:todayKey,values:names.map(function(_,i){return totals[i]||[0,0];}),unmatched:unmatched};
+}
+
+function applyWarehouse145DailyCounters_(snapshot, plan) {
+  snapshot.started=true;
+  if(plan.values.length)plan.sheet.getRange(5,4,plan.values.length,2).setValues(plan.values);
+  // Preserve formula-driven titles and the rest of a manually written title.
+  if(!snapshot.titleFormula && /\d{1,2}\/\d{1,2}\/\d{4}/.test(String(snapshot.title)))
+    plan.sheet.getRange('A1').setValue(String(snapshot.title).replace(/\d{1,2}\/\d{1,2}\/\d{4}/,displayDate_(plan.date)));
+}
+
+function restoreWarehouse145DailyCounters_(snapshot) {
+  if(!snapshot || !snapshot.started)return;
+  if(snapshot.count)snapshot.sheet.getRange(5,4,snapshot.count,2).setValues(snapshot.values);
+  if(!snapshot.titleFormula)snapshot.sheet.getRange('A1').setValue(snapshot.title);
+}
+
+// ADMIN repair: projection only. Does not change stock F, journals or vouchers.
+function rebuildWarehouse145DailyCounters() {
+  coreRequirePermissionV109_('RECONCILE','','rebuildWarehouse145DailyCounters','Tính lại nhập/xuất hôm nay Kho 145 từ nhật ký');
+  const lock=LockService.getScriptLock();lock.waitLock(30000);let snapshot=null;
+  try {
+    const ss=SpreadsheetApp.openById(WAREHOUSE_145_CONFIG.SPREADSHEET_ID),sheet=ss.getSheetByName(WAREHOUSE_145_CONFIG.STOCK_SHEET);
+    if(!sheet)throw new Error('Thiếu TONKHO Kho 145.');
+    snapshot=snapshotWarehouse145DailyCounters_(sheet);
+    const plan=planWarehouse145DailyCounters_(ss,dateKey_(new Date()));
+    applyWarehouse145DailyCounters_(snapshot,plan);SpreadsheetApp.flush();clearDashboardCache();
+    return {success:true,date:plan.date,rows:plan.values.length,unmatchedJournalRows:plan.unmatched,stockChanged:false};
+  } catch(error){restoreWarehouse145DailyCounters_(snapshot);SpreadsheetApp.flush();throw error;}
+  finally{lock.releaseLock();}
 }
 
 function inferUnitFromName_(name) {
@@ -3297,15 +3353,7 @@ function writeTransferStock_(target, newQty, movement, todayKey) {
     target.sheet.getRange(target.row, 7).setValue(statusOf_(newQty, target.threshold));
     return;
   }
-  target.sheet.getRange(target.row, WAREHOUSE_145_CONFIG.QTY_COLUMN).setValue(newQty);
-  const reportDate = readWarehouse145Date_(target.sheet);
-  if (reportDate && reportDate === todayKey) {
-    if (movement === 'IN') {
-      target.sheet.getRange(target.row, WAREHOUSE_145_CONFIG.DAY_IN_COLUMN).setValue(target.originalDayIn + (newQty - target.originalQty));
-    } else if (movement === 'OUT') {
-      target.sheet.getRange(target.row, WAREHOUSE_145_CONFIG.DAY_OUT_COLUMN).setValue(target.originalDayOut + (target.originalQty - newQty));
-    }
-  }
+  throw new Error('Kho 145 phải ghi qua Transaction Engine để đồng bộ tồn và tổng nhập/xuất ngày.');
 }
 
 function restoreTransferStock_(target) {
@@ -4449,6 +4497,8 @@ function aiExecuteBatchPreview_(preview) {
   let transferSheet = null, transferStartRow = 0, transferCount = 0;
   let txLinesBlock = null;
   let sequenceReservation = null;
+  let daily145Snapshot = null;
+  let daily145RollbackError = null;
   try {
     if (!preview || !preview.ready || !Array.isArray(preview.slips) || !preview.slips.length) throw coreRuleError_('R45','Preview không hợp lệ để commit.');
     ledger = coreLedgerBegin_(preview);
@@ -4589,18 +4639,20 @@ function aiExecuteBatchPreview_(preview) {
         if(latestNote58[k]) t.sheet.getRange(t.row,8).setValue(latestNote58[k]);
       } else {
         t.sheet.getRange(t.row,WAREHOUSE_145_CONFIG.QTY_COLUMN).setValue(newQty);
-        const reportDate=readWarehouse145Date_(t.sheet);
-        if(reportDate===transactionDate){
-          t.sheet.getRange(t.row,WAREHOUSE_145_CONFIG.DAY_IN_COLUMN).setValue(t.originalDayIn+(delta145In[k]||0));
-          t.sheet.getRange(t.row,WAREHOUSE_145_CONFIG.DAY_OUT_COLUMN).setValue(t.originalDayOut+(delta145Out[k]||0));
-        }
+        // D/E are rebuilt from journals below, including backdated and transfer rows.
       }
     });
     SpreadsheetApp.flush();
 
     if(rows58.length){const start=journal58.getLastRow()+1;journal58.getRange(start,1,rows58.length,13).setValues(rows58);journal58.getRange(start,1,rows58.length,1).setNumberFormat('dd/MM/yyyy');journalBlocks.push({sheet:journal58,start:start,count:rows58.length,width:13});}
+    if(rows145.length)daily145Snapshot=snapshotWarehouse145DailyCounters_(stock145);
     if(rows145.length){const start=journal145.getLastRow()+1;journal145.getRange(start,1,rows145.length,14).setValues(rows145);journal145.getRange(start,1,rows145.length,1).setNumberFormat('dd/MM/yyyy');journal145.getRange(start,14,rows145.length,1).setNumberFormat('dd/MM/yyyy HH:mm:ss');journalBlocks.push({sheet:journal145,start:start,count:rows145.length,width:14});}
     SpreadsheetApp.flush();
+    if(rows145.length){
+      const dailyPlan=planWarehouse145DailyCounters_(ss145,dateKey_(now));
+      applyWarehouse145DailyCounters_(daily145Snapshot,dailyPlan);
+      SpreadsheetApp.flush();
+    }
     if(transferRows.length) transferSheet.getRange(transferStartRow,17,transferCount,1).setValue('COMPLETED');
 
     // R29-R32: các sheet dẫn xuất được tái tạo từ TONKHO live, không sửa chắp vá.
@@ -4619,11 +4671,13 @@ function aiExecuteBatchPreview_(preview) {
   } catch(error) {
     Object.keys(targetCache).forEach(function(k){try{restoreTransferStock_(targetCache[k]);}catch(e){}});
     journalBlocks.forEach(function(b){try{b.sheet.getRange(b.start,1,b.count,b.width).clearContent();}catch(e){}});
+    try{restoreWarehouse145DailyCounters_(daily145Snapshot);}catch(e){daily145RollbackError=e;}
     try{if(transferSheet&&transferStartRow&&transferCount){transferSheet.getRange(transferStartRow,17,transferCount,1).setValue('ROLLED_BACK');const msg=String(error&&error.message?error.message:error);const vals=transferSheet.getRange(transferStartRow,16,transferCount,1).getDisplayValues().map(function(r){return [[r[0],'LỖI: '+msg].filter(Boolean).join(' · ')];});transferSheet.getRange(transferStartRow,16,transferCount,1).setValues(vals);}}catch(e){}
     try{corePostCommitDerivedSyncV105_();}catch(e){}
     const msg=String(error&&error.message?error.message:error);
     let rollbackCheck={ok:false,mismatches:[{message:'Không xác minh được rollback'}]};
     try{rollbackCheck=coreVerifyRollback_(targetCache);}catch(e){rollbackCheck={ok:false,mismatches:[{message:String(e&&e.message?e.message:e)}]};}
+    if(daily145RollbackError){rollbackCheck.ok=false;(rollbackCheck.mismatches||(rollbackCheck.mismatches=[])).push({field:'145_DAILY_COUNTERS',message:String(daily145RollbackError.message||daily145RollbackError)});}
     const finalStatus=rollbackCheck.ok?'ROLLED_BACK':'NEEDS_RECONCILIATION';
     try{coreUpdateTransactionLinesStatus_(txLinesBlock,finalStatus,msg);}catch(e){}
     try{coreLedgerFinish_(ledger,finalStatus,[],rollbackCheck.ok?coreOriginalSnapshot_(targetCache):{},msg,sequenceReservation);}catch(e){}
